@@ -69,7 +69,7 @@ Obsidian vault. Best to be used in combination with:
   synced into the vault, planned by drag and drop. Focus shows you what
   is drifting to the outer rings; the Planner is where you drag it back
   into the week.
-- **[myICOR INKLINE theme](https://community.obsidian.md/themes/icor-for-life-inkline)**,
+- **[ICOR for Life INKLINE theme](https://community.obsidian.md/themes/icor-for-life-inkline)**,
   the hand-drawn ICOR look every surface of the Edition is designed
   against. The Focus canvas rides the same token grammar, so the map
   matches your vault in ink and paper mode alike.
