@@ -1,4 +1,4 @@
-/* ICOR Focus - a user-centered gravity map of the Lifeworld.
+/* ICOR for Life - Focus - a user-centered gravity map of the Lifeworld.
  *
  * Principle: the user sits in the center; everything they interacted with
  * orbits them.
@@ -842,7 +842,7 @@ class IcorFocusPlugin extends Plugin {
     // instant page previews from the map, no modifier key needed
     if (typeof this.registerHoverLinkSource === 'function') {
       this.registerHoverLinkSource('icor-focus', {
-        display: 'ICOR Focus', defaultMod: false,
+        display: 'ICOR for Life - Focus', defaultMod: false,
       });
     }
 
@@ -895,7 +895,7 @@ class IcorFocusPlugin extends Plugin {
     if (names.every((n) => !/^\d{2}/.test(n))) return;
     const missing = missingRooms(names);
     if (missing.length === 0) return;
-    const message = `ICOR Focus: this vault has no room ${missing.join(', ')}. `
+    const message = `ICOR for Life - Focus: this vault has no room ${missing.join(', ')}. `
       + 'Those notes will be drawn as ordinary notes until the rooms are there.';
     console.warn(message);
     new Notice(message, 12000);

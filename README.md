@@ -1,4 +1,4 @@
-# ICOR Focus
+# ICOR for Life - Focus
 
 A gravity map with you at the center. Open it and the question "what am I
 actually working on?" answers itself in one look: everything you touched
@@ -6,7 +6,7 @@ today orbits close, older work ripples outward ring by ring, and your Key
 Elements, Projects, Topics, Habits, Goals and Contacts each keep their own
 color and shape while everything else renders neutral.
 
-Most graph views show you the structure of your vault. ICOR Focus shows
+Most graph views show you the structure of your vault. ICOR for Life - Focus shows
 you your attention. Distance here is not decoration: it is computed
 deterministically from concrete signals (edits, mentions, backlinks,
 opens), so the same day always draws the same map, and a project drifting
@@ -30,7 +30,7 @@ intensity score. Four signals feed both:
 ## The page
 
 - `FOCUS` button under the ICOR for Life banner in the file tree, or the
-  command `ICOR Focus: Open the Focus map`
+  command `ICOR for Life - Focus: Open the Focus map`
 - Ring widths are dynamic: busy days wide, empty days thin
 - `ALL | ENTITIES` toggle on the page; range selector 7 / 14 / 30 days
 - Drag nodes, pan the canvas, mousewheel zoom; click a node to open the note
@@ -38,7 +38,7 @@ intensity score. Four signals feed both:
 
 ## Privacy: no network use at all
 
-ICOR Focus makes no network requests, and there is no telemetry. Every
+ICOR for Life - Focus makes no network requests, and there is no telemetry. Every
 signal it uses is computed from your own vault, and the log of which notes
 you opened stays in this plugin's local `data.json`, pruned after 35 days.
 Nothing leaves your machine.
@@ -59,29 +59,29 @@ tap a node to open the note.
 
 ## ICOR for Life Obsidian Edition
 
-ICOR Focus is the review surface of the **ICOR for Life Obsidian
+ICOR for Life - Focus is the review surface of the **ICOR for Life Obsidian
 Edition**: ICOR (Input, Control, Output, Refine), the productivity
 methodology by Paperless Movement / myICOR, implemented as a ready-to-use
 Obsidian vault. Best to be used in combination with:
 
-- **[ICOR Planner](https://obsidian.md/plugins?id=icor-for-life-planner)**, the weekly
+- **[ICOR for Life - Planner](https://obsidian.md/plugins?id=icor-for-life-planner)**, the weekly
   planning board: Todoist, ClickUp, starred email and Google Calendar
   synced into the vault, planned by drag and drop. Focus shows you what
   is drifting to the outer rings; the Planner is where you drag it back
   into the week.
-- **[ICOR for Life INKLINE theme](https://community.obsidian.md/themes/icor-for-life-inkline)**,
+- **[ICOR for Life - INKLINE theme](https://community.obsidian.md/themes/icor-for-life-inkline)**,
   the hand-drawn ICOR look every surface of the Edition is designed
   against. The Focus canvas rides the same token grammar, so the map
   matches your vault in ink and paper mode alike.
-- **[myICOR Connect](https://obsidian.md/plugins?id=icor-for-life-connect)**, your
+- **[ICOR for Life - Connect](https://obsidian.md/plugins?id=icor-for-life-connect)**, your
   app.myicor.com account inside the vault. The reviewing habit this map
   is built for is taught in the ICOR Journey on myicor.com; Connect
   brings those courses next to your notes.
-- **[ICOR Diagrams](https://obsidian.md/plugins?id=icor-for-life-diagrams)**, a
+- **[ICOR for Life - Diagrams](https://obsidian.md/plugins?id=icor-for-life-diagrams)**, a
   fullscreen viewer with zoom and pan for the mermaid diagrams in your
   notes. Same instinct as this map: see the shape of a thing instead of
   scrolling through it.
-- **[ICOR AI Chat](https://obsidian.md/plugins?id=icor-for-life-chat)**, your AI team
+- **[ICOR for Life - Chat](https://obsidian.md/plugins?id=icor-for-life-chat)**, your AI team
   in a tab beside your notes, working from your vault's own instructions.
   When the map shows something drifting to the outer rings, the team is one
   tab away to work out why.
