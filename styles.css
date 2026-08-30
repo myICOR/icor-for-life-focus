@@ -1,0 +1,237 @@
+/* ICOR Focus - INKLINE grammar. Every token falls back for vanilla themes. */
+
+/* ------------------------------------------------------------ launcher */
+
+/* Icon-only, sits in the file explorer's tool-button row, marker orange. */
+.ifocus-launcher.nav-action-button {
+  color: var(--ink-marker, #ff5a2d);
+}
+.ifocus-launcher.nav-action-button:hover {
+  color: var(--ink-marker-up, #ff7248);
+  background: var(--ink-marker-soft, rgba(255, 90, 45, 0.13));
+}
+
+/* ------------------------------------------------------------ page */
+
+.ifocus-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.ifocus-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--ink-hairline, var(--background-modifier-border));
+  flex-wrap: wrap;
+}
+
+.ifocus-head { display: flex; align-items: baseline; gap: 12px; }
+
+.ifocus-kicker {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--ink-marker, #ff5a2d);
+}
+
+.ifocus-sub {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  color: var(--ink-paper-faint, var(--text-faint));
+}
+
+.ifocus-controls { display: flex; align-items: center; gap: 10px; }
+
+.ifocus-seg {
+  display: flex;
+  border: 1px solid var(--ink-hairline-emphasis, var(--background-modifier-border));
+  border-radius: var(--ink-radius-pill, 999px);
+  overflow: hidden;
+}
+.ifocus-seg-btn {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  padding: 4px 12px;
+  cursor: var(--cursor, pointer);
+  color: var(--ink-paper-faint, var(--text-faint));
+  user-select: none;
+}
+.ifocus-seg-btn:hover { color: var(--ink-paper, var(--text-normal)); }
+.theme-light .ifocus-seg-btn:hover { color: var(--text-normal); }
+.ifocus-seg-btn.is-on {
+  background: var(--ink-marker-bg-emphasis, rgba(255, 90, 45, 0.16));
+  color: var(--ink-marker, #ff5a2d);
+}
+
+.ifocus-range {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------ stage */
+
+.ifocus-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ifocus-canvas {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.ifocus-canvas:active { cursor: grabbing; }
+.ifocus-canvas.is-hit { cursor: pointer; }
+
+.ifocus-tip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  max-width: 320px;
+  padding: 5px 10px;
+  border-radius: var(--ink-radius-subtle, 10px);
+  border: 1px solid var(--ink-hairline-emphasis, var(--background-modifier-border));
+  background: var(--ink-overlay, var(--background-primary));
+  color: var(--ink-paper, var(--text-normal));
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.theme-light .ifocus-tip {
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.ifocus-legend {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+}
+.ifocus-lg-row { display: flex; align-items: center; gap: 8px; }
+.ifocus-lg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--lg-color, currentColor);
+}
+.ifocus-shape-diamond {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.ifocus-shape-square { border-radius: 2px; }
+.ifocus-shape-triangle {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.ifocus-shape-hex {
+  border-radius: 0;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+}
+.ifocus-shape-star {
+  border-radius: 0;
+  width: 12px;
+  height: 12px;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.ifocus-shape-ring {
+  background: transparent;
+  border: 2.5px solid var(--lg-color, currentColor);
+}
+
+/* --------------------------------------------------- forces panel */
+
+.ifocus-gear {
+  padding: 4px;
+  border-radius: var(--ink-radius-control, 4px);
+  color: var(--ink-paper-faint, var(--text-faint));
+}
+.ifocus-gear:hover { color: var(--ink-paper, var(--text-normal)); }
+.theme-light .ifocus-gear:hover { color: var(--text-normal); }
+.ifocus-gear.is-on { color: var(--ink-marker, #ff5a2d); }
+.ifocus-gear svg { width: 16px; height: 16px; }
+
+.ifocus-panel {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  right: 12px;
+  display: none;
+  width: 230px;
+  padding: 12px 14px 14px;
+  border-radius: var(--ink-radius-standard, 16px);
+  border: 1px solid var(--ink-hairline-emphasis, var(--background-modifier-border));
+  background: var(--ink-overlay, var(--background-primary));
+}
+.theme-light .ifocus-panel { background: var(--background-primary); }
+.ifocus-panel.is-open { display: block; }
+
+.ifocus-p-head {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink-marker, #ff5a2d);
+  margin: 10px 0 4px;
+}
+.ifocus-p-head:first-child { margin-top: 0; }
+
+.ifocus-p-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+}
+.ifocus-p-label {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--ink-paper-dim, var(--text-muted));
+  white-space: nowrap;
+}
+.theme-light .ifocus-p-label { color: var(--text-muted); }
+.ifocus-p-slider { width: 104px; accent-color: var(--ink-marker, #ff5a2d); }
+.ifocus-p-slider[disabled] { opacity: 0.35; }
+.ifocus-p-select { font-size: 11px; max-width: 120px; }
+.ifocus-p-check { accent-color: var(--ink-marker, #ff5a2d); }
+.ifocus-lg-name {
+  font-family: var(--ink-font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-paper-faint, var(--text-faint));
+}
+
+.ifocus-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--ink-font-hand, cursive);
+  font-size: var(--ink-text-hand, 23px);
+  color: var(--ink-paper-faint, var(--text-faint));
+}

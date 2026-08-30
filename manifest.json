@@ -1,0 +1,10 @@
+{
+  "id": "icor-for-life-focus",
+  "name": "ICOR Focus",
+  "version": "0.5.1",
+  "minAppVersion": "1.4.0",
+  "description": "See where your attention actually goes: you sit in the center of the map, today's work orbits close, older work ripples outward, and every entity type keeps its own color and shape. Part of the ICOR for Life suite.",
+  "author": "myICOR",
+  "isDesktopOnly": false,
+  "authorUrl": "https://myicor.com"
+}
