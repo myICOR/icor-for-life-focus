@@ -25,7 +25,7 @@ intensity score. Four signals feed both:
 - **File edits** - the file's modification day (covers you and the AI team)
 - **Daily-note mentions** - `[[wikilinks]]` in daily notes, dated by the note's day (weight 3)
 - **Backlinks anywhere** - a note edited on day X that links to Y counts for Y on day X
-- **Opens** - every note you open is logged locally (in `data.json`, pruned after 35 days)
+- **Opens** - every note you open is logged locally, on this device only (pruned after 35 days), and merged with the map's older opens history when the page renders
 
 ## The page
 
@@ -39,13 +39,16 @@ intensity score. Four signals feed both:
 ## Privacy: no network use at all
 
 ICOR for Life - Focus makes no network requests, and there is no telemetry. Every
-signal it uses is computed from your own vault, and the log of which notes
-you opened stays in this plugin's local `data.json`, pruned after 35 days.
-Nothing leaves your machine.
+signal it uses is computed from your own vault. The log of which notes you
+opened stays in this device's own local storage (never Obsidian Sync), pruned
+after 35 days; on a vault with more than one device, each device keeps its
+own opens log rather than fighting another device over one shared copy in
+`data.json`. Nothing leaves your machine.
 
 ## Install
 
-Requires Obsidian 1.4.0 or newer.
+Requires Obsidian 1.8.7 or newer (the per-device local storage the opens log
+now lives in).
 
 - **From Obsidian:** Settings, Community plugins, Browse, search "ICOR
   Focus", install, enable.

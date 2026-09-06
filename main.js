@@ -30,8 +30,21 @@ const DEFAULT_SETTINGS = {
   ringPull: 1,              // radial spring multiplier
   labelMode: 'fade',        // 'fade' | 'always' | 'hidden'
   labelFadeZoom: 0.55,      // zoom level where fading labels appear
-  opens: {},                // path -> { 'YYYY-MM-DD': count }
+  opens: {},                // FROZEN as of v0.5.3: path -> { 'YYYY-MM-DD': count }.
+                             // Obsidian Sync replicates data.json onto every device,
+                             // last-write-wins, and this field was written on every
+                             // single file-open: two synced devices silently clobbered
+                             // each other's opens, and every open dirtied data.json
+                             // for nothing (Flint's mobile audit, fix 2). New opens go
+                             // to this device's own local storage instead (see
+                             // OPENS_STORAGE_KEY below); this field stays exactly as it
+                             // was at upgrade, read-only, and mergeOpens() at render
+                             // time is the only thing that still reads it.
 };
+
+/* This device's own opens log lives here (App.loadLocalStorage /
+   saveLocalStorage, vault-scoped, never synced) instead of in data.json. */
+const OPENS_STORAGE_KEY = 'icor-for-life-focus:opens';
 
 /* ---------------------------------------------------------------- types */
 
@@ -234,8 +247,43 @@ function isExcluded(path, excludeFolders, includeReadmes) {
   return false;
 }
 
+/* Combine the frozen historical opens log (data.json, no longer written)
+ * with this device's own live one (local storage) for a single render.
+ * Both are `{ path: { 'YYYY-MM-DD': count } }`; a day present on both sides
+ * (the crossover day this device upgraded) sums rather than picks a winner.
+ * Neither input is mutated. */
+function mergeOpens(historical, device) {
+  const out = {};
+  for (const src of [historical, device]) {
+    for (const [path, days] of Object.entries(src || {})) {
+      const o = out[path] || (out[path] = {});
+      for (const [key, count] of Object.entries(days || {})) {
+        o[key] = (o[key] || 0) + count;
+      }
+    }
+  }
+  return out;
+}
+
+/* Drop day-keys older than the widest selectable window (30 days) plus a
+ * small buffer, and any path left with no keys. Pure: the caller decides
+ * which log this runs against and owns saving it. `now` overridable for the
+ * gates. */
+function pruneOpensLog(log, now) {
+  for (const path of Object.keys(log)) {
+    for (const key of Object.keys(log[path])) {
+      const idx = dayIndexOf(key, now);
+      if (idx < 0 || idx > 35) delete log[path][key];
+    }
+    if (!Object.keys(log[path]).length) delete log[path];
+  }
+  return log;
+}
+
 /* Build the focus model from the vault. Pure-ish: everything it reads is
- * passed in, so the test harness can feed it a fake vault. */
+ * passed in, so the test harness can feed it a fake vault. `settings.opens`
+ * is expected to already be the merged view (mergeOpens) by the time it
+ * gets here. */
 function buildModel(app, settings, now) {
   const ref = now || new Date();
   const N = settings.windowDays;
@@ -467,7 +515,11 @@ class FocusView extends ItemView {
   /* Rebuild the model, keep existing positions where paths survive. */
   refresh() {
     const s = this.plugin.settings;
-    let model = buildModel(this.plugin.app, s, new Date());
+    /* opens is device-local now (see the plugin's deviceOpens); merge the
+       frozen historical log back in for the render without mutating either
+       source or the persisted settings object. */
+    const merged = Object.assign({}, s, { opens: mergeOpens(s.opens, this.plugin.deviceOpens) });
+    let model = buildModel(this.plugin.app, merged, new Date());
     if (s.entitiesOnly) {
       const keep = new Set(model.nodes.filter((n) => n.entity).map((n) => n.path));
       model = {
@@ -831,6 +883,7 @@ class FocusView extends ItemView {
 class IcorFocusPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
+    this.deviceOpens = this.app.loadLocalStorage(OPENS_STORAGE_KEY) || {};
     this.registerView(VIEW_TYPE_FOCUS, (leaf) => new FocusView(leaf, this));
     this.addCommand({
       id: 'open-focus',
@@ -846,11 +899,11 @@ class IcorFocusPlugin extends Plugin {
       });
     }
 
-    // opens log
+    // opens log -- this device's own, local storage, never data.json (fix 2)
     this.registerEvent(this.app.workspace.on('file-open', (f) => {
       if (!f || f.extension !== 'md') return;
       const key = todayKey();
-      const o = this.settings.opens;
+      const o = this.deviceOpens;
       if (!o[f.path]) o[f.path] = {};
       o[f.path][key] = (o[f.path][key] || 0) + 1;
       this.pruneOpens();
@@ -883,7 +936,7 @@ class IcorFocusPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => this.mountLauncher());
     this.registerEvent(this.app.workspace.on('layout-change', () => this.mountLauncher()));
 
-    this.saveSoon = debounce(() => this.saveSettings(), 4000, true);
+    this.saveSoon = debounce(() => this.saveDeviceOpens(), 4000, true);
   }
 
   reportMissingRooms() {
@@ -906,14 +959,7 @@ class IcorFocusPlugin extends Plugin {
   }
 
   pruneOpens() {
-    const o = this.settings.opens;
-    for (const path of Object.keys(o)) {
-      for (const key of Object.keys(o[path])) {
-        const idx = dayIndexOf(key);
-        if (idx < 0 || idx > 35) delete o[path][key];
-      }
-      if (!Object.keys(o[path]).length) delete o[path];
-    }
+    pruneOpensLog(this.deviceOpens);
   }
 
   /* Icon-only launcher inside the file explorer's tool-button row.
@@ -965,6 +1011,10 @@ class IcorFocusPlugin extends Plugin {
   }
 
   async saveSettings() { await this.saveData(this.settings); }
+
+  saveDeviceOpens() {
+    this.app.saveLocalStorage(OPENS_STORAGE_KEY, this.deviceOpens);
+  }
 }
 
 /* ---------------------------------------------------------------- settings */
@@ -1026,6 +1076,6 @@ module.exports.__test = {
   classifyPath, roomOf, missingRooms, ROOM_CLASS, EXPECTED_ROOMS,
   dayKeyOf, dayIndexOf, dayIndexOfMtime, makeAccumulator,
   isExcluded, buildModel, bandLayout, angleOf, nodeRadius, TYPES,
-  traceShape, labelAlphaOf,
+  traceShape, labelAlphaOf, mergeOpens, pruneOpensLog, OPENS_STORAGE_KEY,
   DEFAULT_SETTINGS, FocusView, IcorFocusPlugin, VIEW_TYPE_FOCUS,
 };
