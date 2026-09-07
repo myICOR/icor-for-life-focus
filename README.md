@@ -60,6 +60,22 @@ No build step: `main.js` is hand-written CommonJS. Works on desktop and
 mobile: on a touch screen, drag with one finger, pinch with two to zoom,
 tap a node to open the note.
 
+## Releasing
+
+A release is cut only when a version tag is pushed. A plain push to `main`
+never releases anything.
+
+1. Bump the version in `manifest.json` and `versions.json` (new line, same `minAppVersion`).
+2. Push to `main`. Nothing ships yet.
+3. Flint reads the diff before ship. No read, no tag.
+4. Tag the commit with the bare version and push the tag:
+   `git tag -a 0.5.4 -m "ICOR for Life - Focus 0.5.4" && git push github 0.5.4`
+   (never `v0.5.4`: the Obsidian directory reads the tag as the version).
+
+The Release workflow refuses a tag that does not equal `manifest.json`'s
+version or that is not on `main`, then publishes `main.js`, `manifest.json` and `styles.css` with the commit subjects since the previous tag as notes.
+The nightly version gate still checks that tag, branch and release agree.
+
 ## ICOR for Life Obsidian Edition
 
 ICOR for Life - Focus is the review surface of the **ICOR for Life Obsidian
