@@ -1,124 +1,79 @@
 # ICOR for Life - Focus
 
-A gravity map with you at the center. Open it and the question "what am I
-actually working on?" answers itself in one look: everything you touched
-today orbits close, older work ripples outward ring by ring, and your Key
-Elements, Projects, Topics, Habits, Goals and Contacts each keep their own
-color and shape while everything else renders neutral.
+**See where your attention actually went.**
 
-Most graph views show you the structure of your vault. ICOR for Life - Focus shows
-you your attention. Distance here is not decoration: it is computed
-deterministically from concrete signals (edits, mentions, backlinks,
-opens), so the same day always draws the same map, and a project drifting
-toward the outer rings is real information, not layout noise. The canvas
-only renders what the signals say.
+You sit at the center. Everything you worked on today orbits close, older
+work ripples outward ring by ring, and the question "what am I actually
+working on?" answers itself in one look.
 
-**Beta release.** This plugin works and is in daily use in a real vault,
-but you will find rough edges. If something looks off, open an issue on
-this repo and it gets fixed fast.
+Part of the [ICOR for Life](https://myicor.com) suite.
 
-## Signals
+## What it is for
 
-An item's ring is its most recent interaction; its size is a decayed
-intensity score. Four signals feed both:
+A graph view shows you the shape of your vault. That is interesting once and
+then never again, because the shape barely changes.
 
-- **File edits** - the file's modification day (covers you and the AI team)
-- **Daily-note mentions** - `[[wikilinks]]` in daily notes, dated by the note's day (weight 3)
-- **Backlinks anywhere** - a note edited on day X that links to Y counts for Y on day X
-- **Opens** - every note you open is logged locally, on this device only (pruned after 35 days), and merged with the map's older opens history when the page renders
+This shows you something that changes every day: where your attention has
+been going. A project drifting toward the outer rings is real information. So
+is a Topic you swore you were exploring sitting three rings out, untouched
+since last month.
 
-## The page
+Use it at the start of a week to see what you actually did last week, rather
+than what you remember doing.
 
-- `FOCUS` button under the ICOR for Life banner in the file tree, or the
-  command `ICOR for Life - Focus: Open the Focus map`
-- Ring widths are dynamic: busy days wide, empty days thin
-- `ALL | ENTITIES` toggle on the page; range selector 7 / 14 / 30 days
-- Drag nodes, pan the canvas, mousewheel zoom; click a node to open the note
-- Faint lines connect items that link to each other (can be turned off)
+## Getting started
 
-## Privacy: no network use at all
+Click **FOCUS** under the ICOR for Life banner in the file tree, or run
+**Open the Focus map** from the command palette.
 
-ICOR for Life - Focus makes no network requests, and there is no telemetry. Every
-signal it uses is computed from your own vault. The log of which notes you
-opened stays in this device's own local storage (never Obsidian Sync), pruned
-after 35 days; on a vault with more than one device, each device keeps its
-own opens log rather than fighting another device over one shared copy in
-`data.json`. Nothing leaves your machine.
+There is nothing to set up and nothing to configure. The map draws itself
+from what is already in your vault.
 
-## Install
+## Reading the map
 
-Requires Obsidian 1.8.7 or newer (the per-device local storage the opens log
-now lives in).
+- **Distance is recency.** The closest ring is today; each ring out is older.
+  Busy days draw wide rings, quiet days thin ones.
+- **Size is intensity.** A note you touched repeatedly is bigger than one you
+  opened once.
+- **Colour is kind.** Key Elements, Projects, Topics, Habits, Goals and
+  Contacts each keep their own colour and shape; everything else stays
+  neutral so it does not compete.
+- **The same day always draws the same map.** Position is computed from what
+  happened, not from a layout algorithm looking for a pleasing arrangement.
+  If something moved, something changed.
 
-- **From Obsidian:** Settings, Community plugins, Browse, search "ICOR
-  Focus", install, enable.
-- **Manually:** copy `main.js`, `manifest.json` and `styles.css` from the
-  latest release into `.obsidian/plugins/icor-for-life-focus/` and enable the
-  plugin.
+Toggle between everything and entities only, switch the range between 7, 14
+and 30 days, drag nodes, pan, zoom, and click any node to open the note.
 
-No build step: `main.js` is hand-written CommonJS. Works on desktop and
-mobile: on a touch screen, drag with one finger, pinch with two to zoom,
-tap a node to open the note.
+## What it counts
 
-## Releasing
+Four things, all of them already in your vault or on your machine:
 
-A release is cut only when a version tag is pushed. A plain push to `main`
-never releases anything.
+- **Edits**, so work the AI team did on your behalf counts too.
+- **Mentions in daily notes**, dated by the day of the note.
+- **Backlinks**, so a note edited today pulls what it links to along with it.
+- **Opens**, logged on this device only and pruned after 35 days.
 
-1. Bump the version in `manifest.json` and `versions.json` (new line, same `minAppVersion`).
-2. Push to `main`. Nothing ships yet.
-3. Flint reads the diff before ship. No read, no tag.
-4. Tag the commit with the bare version and push the tag:
-   `git tag -a 0.5.4 -m "ICOR for Life - Focus 0.5.4" && git push github 0.5.4`
-   (never `v0.5.4`: the Obsidian directory reads the tag as the version).
+## What it touches
 
-The Release workflow refuses a tag that does not equal `manifest.json`'s
-version or that is not on `main`, then publishes `main.js`, `manifest.json` and `styles.css` with the commit subjects since the previous tag as notes.
-The nightly version gate still checks that tag, branch and release agree.
+- **Reads your notes and their links** to build the map.
+- **Writes one small local log** of which notes you opened, on this device,
+  pruned after 35 days. It never leaves your machine.
 
-## ICOR for Life Obsidian Edition
+**It makes no network connection and starts no process.**
 
-ICOR for Life - Focus is the review surface of the **ICOR for Life Obsidian
-Edition**: ICOR (Input, Control, Output, Refine), the productivity
-methodology by Paperless Movement / myICOR, implemented as a ready-to-use
-Obsidian vault. Best to be used in combination with:
+## Good to know
 
-- **[ICOR for Life - Planner](https://obsidian.md/plugins?id=icor-for-life-planner)**, the weekly
-  planning board: Todoist, ClickUp, starred email and Google Calendar
-  synced into the vault, planned by drag and drop. Focus shows you what
-  is drifting to the outer rings; the Planner is where you drag it back
-  into the week.
-- **[ICOR for Life - INKLINE theme](https://community.obsidian.md/themes/icor-for-life-inkline)**,
-  the hand-drawn ICOR look every surface of the Edition is designed
-  against. The Focus canvas rides the same token grammar, so the map
-  matches your vault in ink and paper mode alike.
-- **[ICOR for Life - Connect](https://obsidian.md/plugins?id=icor-for-life-connect)**, your
-  app.myicor.com account inside the vault. The reviewing habit this map
-  is built for is taught in the ICOR Journey on myicor.com; Connect
-  brings those courses next to your notes.
-- **[ICOR for Life - Diagrams](https://obsidian.md/plugins?id=icor-for-life-diagrams)**, a
-  fullscreen viewer with zoom and pan for the mermaid diagrams in your
-  notes. Same instinct as this map: see the shape of a thing instead of
-  scrolling through it.
-- **[ICOR for Life - Chat](https://obsidian.md/plugins?id=icor-for-life-chat)**, your AI team
-  in a tab beside your notes, working from your vault's own instructions.
-  When the map shows something drifting to the outer rings, the team is one
-  tab away to work out why.
+- **It only renders what the signals say.** An empty-looking map means a quiet
+  period, not a broken plugin.
+- **Beta.** In daily use in a real vault, and you will find rough edges. If
+  something looks off, open an issue.
 
-The complete, preconfigured experience (theme, all plugins, the seven-room
-vault structure and the AI team) ships free as the **ICOR for Life**
-vault: https://myicor.com
+## Support
 
-## License
+Open an issue on this repository. For security problems, see `SECURITY.md`.
 
-What you can do: install it, run it, read the code, modify your own copy,
-and use it in your own business. What you cannot do: sell it, redistribute
-it, or offer it (original or modified) as your own product or service to
-others. Contributions: send a pull request. See `CONTRIBUTING.md`;
-submitting one grants Paperless Movement the rights described in Section 7
-of the LICENSE. This is not open source. It is source-available: the code
-is visible, personal and business use are free, resale and republishing
-are not. Bundled third-party components keep their own licenses; see
-`THIRD-PARTY-NOTICES.md`.
+## Licence
 
-Full text in LICENSE. Machine-readable identifier: LicenseRef-ICOR-Source-Available-1.0.
+Source-available, see `LICENSE`. Not open source. Bundled third-party
+components: see `THIRD-PARTY-NOTICES.md`.
