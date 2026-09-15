@@ -8,8 +8,6 @@ Releases before 0.6.0 carry their notes on the GitHub release itself
 
 ## [0.6.0] - 2026-09-15
 
-Pending Flint's review-before-ship. Not released until that read is done.
-
 ### Added
 - **A ranked list beside the map.** The map has always known which notes
   carry your attention; it only ever drew it as a radius. The list now says
