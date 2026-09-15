@@ -36,3 +36,21 @@ Pending Flint's review-before-ship. Not released until that read is done.
   daily notes, backlinks and your own opens count. Backlinks are still dated
   by the day their source file was edited, because that is the only date a
   link has.
+- **On a phone the list sits under the map, not beside it.** Side by side
+  the list takes a fixed 248px, which on a phone would have left the map
+  about 140px wide: the new feature would have taken the old one away. On a
+  phone the two stack, map first, and the rows scroll inside a capped box so
+  a long list cannot push the map off the screen. The setting still turns
+  the list off entirely.
+
+  Stated plainly, because it matters for what was and was not proven: the
+  rules are gated as text by `test/phone-layout.test.mjs`, but the rendered
+  result was not checked. `App.emulateMobile(true)` is a method on the
+  running Obsidian app and this suite is plain `node --test` against the
+  bundle, so there is no headless way to run it. The render needs a person
+  with the plugin installed, on a phone or with mobile emulation on.
+
+### Internal
+- The row colour is set through `setCssProps` rather than
+  `style.setProperty`, the form the Obsidian API sanctions for a dynamic
+  custom property.

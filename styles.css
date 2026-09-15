@@ -175,6 +175,29 @@
   color: var(--ink-paper-faint, var(--text-faint));
 }
 
+/* ------------------------------------------------------------ phone
+
+   Side by side, the list takes a fixed 248px. On a phone that is most of
+   the screen: about 390 CSS px minus the view chrome leaves the map
+   roughly 140px wide, which is not a map. So on a phone the two stack
+   instead, the map first and the list under it, and the rows scroll
+   inside a capped box so a long list can never push the map off screen.
+   The "Show the list" setting still turns it off entirely; this rule only
+   decides where it sits when it is on. */
+
+body.is-phone .ifocus-body { flex-direction: column; }
+
+body.is-phone .ifocus-stage { min-height: 180px; }
+
+body.is-phone .ifocus-list {
+  width: auto;
+  padding: 10px 12px;
+  border-left: none;
+  border-top: 1px solid var(--ink-hairline, var(--background-modifier-border));
+}
+
+body.is-phone .ifocus-list-rows { max-height: 38vh; }
+
 .ifocus-canvas {
   position: absolute;
   inset: 0;

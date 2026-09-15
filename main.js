@@ -625,7 +625,7 @@ class FocusView extends ItemView {
       const mid = row.createDiv('ifocus-list-mid');
       const name = mid.createDiv({ cls: 'ifocus-list-name', text: node.name });
       const t = TYPES[node.type];
-      if (t) name.style.setProperty('--row-color', t.color);
+      if (t) name.setCssProps({ '--row-color': t.color });
       mid.createDiv({ cls: 'ifocus-list-day', text: dayKeyAgo(node.lastDay, new Date()) });
       row.createDiv({ cls: 'ifocus-list-score', text: round3(node.score).toFixed(1) });
       /* Exactly what a click on the node does (see the pointer release
