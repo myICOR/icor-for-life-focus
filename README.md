@@ -45,6 +45,20 @@ from what is already in your vault.
 Toggle between everything and entities only, switch the range between 7, 14
 and 30 days, drag nodes, pan, zoom, and click any node to open the note.
 
+## The list beside the map
+
+The map shows you the shape. The list beside it names the notes: highest
+score first, with the score and the day each one was last touched. Click a
+row, or tab to it and press Enter, and the note opens in a new tab.
+
+It is headed **Attention (Focus score)** on purpose. If you also run a
+script that counts how often you wrote about something in your journal, that
+is a different number measuring a different thing. Both are useful; neither
+is the other.
+
+The list shows ten notes by default. Settings change that, and can hide the
+list altogether.
+
 ## What it counts
 
 Four things, all of them already in your vault or on your machine:
@@ -54,11 +68,66 @@ Four things, all of them already in your vault or on your machine:
 - **Backlinks**, so a note edited today pulls what it links to along with it.
 - **Opens**, logged on this device only and pruned after 35 days.
 
+**Count file edits** in settings turns the first one off. Turn it off if
+scripts rewrite many notes in your vault at once: one bulk pass stamps the
+same edit time on hundreds of files, and the score then measures the script
+rather than you. It is on by default, so nothing changes unless you say so.
+Backlinks are still dated by the day their source file was edited, because
+that is the only date a link has.
+
+## Machine layer
+
+Every time the map recomputes, Focus writes what it computed to
+`.icor-for-life/icor-for-life-focus/attention.json`, so a script, the AI
+chat or another plugin can read the same ranking instead of guessing at it.
+The folder is hidden, nothing in it is a note, and deleting it loses
+nothing: the next recompute writes the file again.
+
+```json
+{
+  "schema": 1,
+  "generated_at": "2026-09-15T10:00:00.000Z",
+  "window_days": 7,
+  "count_file_edits": true,
+  "items": [
+    {
+      "path": "04 Inner World/My Life/Topics/knowledge-management.md",
+      "name": "knowledge-management",
+      "type": "topic",
+      "score": 8.25,
+      "last_seen": "2026-09-15",
+      "signals": { "edits": 2, "mentions": 3, "backlinks": 1, "opens": 2.25 }
+    }
+  ]
+}
+```
+
+- `schema` is an integer. Check it before you trust a field; this document
+  describes `1`.
+- `generated_at` is the instant of the recompute, in UTC.
+- `window_days` is the range the map was showing: today plus that many days.
+- `count_file_edits` says whether the edit signal was counted, because the
+  same vault scores differently with it off.
+- `items` carries **every** note in the window, highest score first, not just
+  the ones the list shows. Ties break on the more recently seen note, then on
+  the path, so the order is the same on two machines with the same vault.
+- `last_seen` is a local day, `YYYY-MM-DD`: the day of the most recent thing
+  that counted.
+- `signals` splits the score by what paid for it, and the four numbers add up
+  to `score`.
+
+The file is per device. Obsidian Sync skips folders whose name starts with a
+dot, so each machine writes its own, which is right: the opens half of the
+score is that machine's anyway.
+
 ## What it touches
 
 - **Reads your notes and their links** to build the map.
 - **Writes one small local log** of which notes you opened, on this device,
   pruned after 35 days. It never leaves your machine.
+- **Writes one small JSON file** under `.icor-for-life/icor-for-life-focus/`
+  with the ranking it just computed. See "Machine layer" above. It writes
+  nowhere else, and it never touches your notes.
 
 **It makes no network connection and starts no process.**
 

@@ -15,9 +15,24 @@
 
 const {
   Plugin, ItemView, Notice, PluginSettingTab, Setting, TFile, setIcon, debounce,
+  normalizePath,
 } = require('obsidian');
 
 const VIEW_TYPE_FOCUS = 'icor-focus-view';
+
+/* The machine layer (GL-1008). One hidden folder, one subfolder named
+   exactly as this plugin's id, one documented file with a top-level schema
+   integer. Reached through the vault adapter only: the Vault API does not
+   see a folder whose name starts with a dot, and the adapter is the same
+   call on desktop and on a phone. */
+const META_DIR = '.icor-for-life';
+const ATTENTION_DIR = META_DIR + '/icor-for-life-focus';
+const ATTENTION_PATH = ATTENTION_DIR + '/attention.json';
+const ATTENTION_SCHEMA = 1;
+
+/* What one interaction is worth, and the name its contribution carries in
+   `signals`. One table, so the score and the breakdown can never disagree. */
+const SIGNAL_WEIGHTS = { mentions: 3, edits: 2, opens: 2, backlinks: 1 };
 
 const DEFAULT_SETTINGS = {
   windowDays: 7,            // past days shown beyond today
@@ -26,6 +41,9 @@ const DEFAULT_SETTINGS = {
   showLinks: true,
   entitiesOnly: false,      // page toggle, persisted
   halfLifeDays: 3,          // decay half-life for the intensity score
+  countFileEdits: true,     // the mtime edit signal; see buildModel
+  showList: true,           // the ranked list beside the map
+  listCount: 10,            // rows in that list
   nodeSpacing: 26,          // extra separation between nodes, px
   ringPull: 1,              // radial spring multiplier
   labelMode: 'fade',        // 'fade' | 'always' | 'hidden'
@@ -217,22 +235,42 @@ function dayIndexOfMtime(mtime, now) {
   return dayIndexOf(dayKeyOf(new Date(mtime)), now);
 }
 
+/* The inverse of dayIndexOf: the day key `dayIdx` whole local days before
+ * now. 0 gives today. Local, like every other date in this file, so a
+ * reader of the written file sees the day Tom had, not the day Greenwich
+ * had. */
+function dayKeyAgo(dayIdx, now) {
+  const ref = now || new Date();
+  return dayKeyOf(new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - dayIdx));
+}
+
 const DAILY_NOTE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* ---------------------------------------------------------------- model */
 
-/* Interactions accumulate per path: keep the most recent day index and a
- * decayed intensity score. Weights: daily-note mention 3, edit 2, open 2,
- * backlink 1. */
+/* Interactions accumulate per path: keep the most recent day index, a
+ * decayed intensity score, and the same score split by which signal paid
+ * for it. Weights are SIGNAL_WEIGHTS: daily-note mention 3, edit 2, open 2,
+ * backlink 1.
+ *
+ * The split is not decoration. Two numbers answer "which topics have my
+ * attention" in this vault -- this score and the journal-link count the
+ * vault script computes -- and they can only be compared if this one says
+ * how much of itself came from each signal. */
 function makeAccumulator(windowDays, halfLifeDays) {
   const items = new Map();
   return {
-    add(path, dayIdx, weight) {
+    add(path, dayIdx, weight, signal) {
       if (dayIdx < 0 || dayIdx > windowDays) return;
       let it = items.get(path);
-      if (!it) { it = { path, lastDay: dayIdx, score: 0 }; items.set(path, it); }
+      if (!it) {
+        it = { path, lastDay: dayIdx, score: 0, signals: { edits: 0, mentions: 0, backlinks: 0, opens: 0 } };
+        items.set(path, it);
+      }
       if (dayIdx < it.lastDay) it.lastDay = dayIdx;
-      it.score += weight * Math.pow(0.5, dayIdx / halfLifeDays);
+      const gained = weight * Math.pow(0.5, dayIdx / halfLifeDays);
+      it.score += gained;
+      if (signal && it.signals[signal] !== undefined) it.signals[signal] += gained;
     },
     items,
   };
@@ -295,8 +333,19 @@ function buildModel(app, settings, now) {
 
   for (const f of files) {
     const editDay = dayIndexOfMtime(f.stat.mtime, ref);
-    // 1) edits
-    acc.add(f.path, editDay, 2);
+    /* 1) edits, from the file's own mtime.
+     *
+     * Switchable, and default on so nobody's map changes under them. In a
+     * vault where scripts rewrite notes in bulk, one bulk pass stamps the
+     * same mtime on hundreds of files and the edit signal then measures the
+     * script rather than the person. Off, the score keeps only the signals a
+     * person leaves: daily-note mentions, backlinks and opens.
+     *
+     * Note what the switch does NOT do: a backlink is still dated by the
+     * source file's edit day, because that is the only date a link has. Off
+     * means an edit no longer scores on its own, not that mtime stops being
+     * read. */
+    if (settings.countFileEdits !== false) acc.add(f.path, editDay, SIGNAL_WEIGHTS.edits, 'edits');
     const links = resolved[f.path] || {};
     const isDaily = DAILY_NOTE_RE.test(f.basename);
     const noteDay = isDaily ? dayIndexOf(f.basename, ref) : -1;
@@ -304,9 +353,9 @@ function buildModel(app, settings, now) {
       if (!byPath.has(target)) continue;
       if (target === f.path) continue;
       // 2) daily-note mentions, dated by the note's own day
-      if (isDaily && noteDay >= 0) acc.add(target, noteDay, 3);
+      if (isDaily && noteDay >= 0) acc.add(target, noteDay, SIGNAL_WEIGHTS.mentions, 'mentions');
       // 3) backlinks anywhere, dated by the source's edit day
-      else if (editDay >= 0) acc.add(target, editDay, 1);
+      else if (editDay >= 0) acc.add(target, editDay, SIGNAL_WEIGHTS.backlinks, 'backlinks');
     }
   }
   // 4) opens logged by the plugin
@@ -314,7 +363,7 @@ function buildModel(app, settings, now) {
     if (!byPath.has(path)) continue;
     if (isExcluded(path, settings.excludeFolders, settings.includeReadmes)) continue;
     for (const [key, count] of Object.entries(days)) {
-      acc.add(path, dayIndexOf(key, ref), 2 * Math.min(count, 5));
+      acc.add(path, dayIndexOf(key, ref), SIGNAL_WEIGHTS.opens * Math.min(count, 5), 'opens');
     }
   }
 
@@ -328,6 +377,7 @@ function buildModel(app, settings, now) {
       entity: TYPES[type].entity,
       lastDay: it.lastDay,
       score: it.score,
+      signals: it.signals,
     });
   }
   nodes.sort((a, b) => a.path < b.path ? -1 : 1);
@@ -347,6 +397,63 @@ function buildModel(app, settings, now) {
     }
   }
   return { nodes, edges, windowDays: N };
+}
+
+/* ------------------------------------------------------------ attention */
+
+function round3(n) { return Math.round(n * 1000) / 1000; }
+
+/* The same order the list shows and the file records: score first, then the
+ * more recently touched, then the path so the order never depends on which
+ * way the vault happened to hand the files over. Returns a new array; the
+ * caller's is untouched. */
+function rankNodes(nodes) {
+  return nodes.slice().sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.lastDay !== b.lastDay) return a.lastDay - b.lastDay;
+    return a.path < b.path ? -1 : 1;
+  });
+}
+
+function topAttention(nodes, limit) {
+  const n = Math.max(1, Math.floor(limit || 10));
+  return rankNodes(nodes).slice(0, n);
+}
+
+/* One node as a row of the machine-layer file. Scores are rounded to three
+ * decimals: they are a ranking, and the last digits of a float are noise a
+ * reader would have to pretend to trust. */
+function attentionItem(node, now) {
+  const s = node.signals || {};
+  return {
+    path: node.path,
+    name: node.name,
+    type: node.type,
+    score: round3(node.score),
+    last_seen: dayKeyAgo(node.lastDay, now),
+    signals: {
+      edits: round3(s.edits || 0),
+      mentions: round3(s.mentions || 0),
+      backlinks: round3(s.backlinks || 0),
+      opens: round3(s.opens || 0),
+    },
+  };
+}
+
+/* The whole file, as written. Every node in the window, ranked, because a
+ * reader that wants a different top N must not have to ask this plugin to
+ * recompute with a different setting. `count_file_edits` rides along: the
+ * same vault scores differently with the edit signal off, and a reader
+ * comparing this number with the vault script's has to know which it got. */
+function attentionPayload(model, settings, now) {
+  const ref = now || new Date();
+  return {
+    schema: ATTENTION_SCHEMA,
+    generated_at: ref.toISOString(),
+    window_days: model.windowDays,
+    count_file_edits: (settings || {}).countFileEdits !== false,
+    items: rankNodes(model.nodes).map((n) => attentionItem(n, ref)),
+  };
 }
 
 /* Ring geometry: dynamic band widths. Busy days wide, empty days thin,
@@ -438,7 +545,9 @@ class FocusView extends ItemView {
       this.gearBtn.toggleClass('is-on', this.panel.hasClass('is-open'));
     });
 
-    this.stage = root.createDiv('ifocus-stage');
+    const body = root.createDiv('ifocus-body');
+    this.stage = body.createDiv('ifocus-stage');
+    this.buildList(body);
     this.canvas = this.stage.createEl('canvas', { cls: 'ifocus-canvas' });
     this.buildPanel();
     this.tip = this.stage.createDiv('ifocus-tip');
@@ -464,6 +573,75 @@ class FocusView extends ItemView {
     this.plugin.settings.entitiesOnly = v;
     this.plugin.saveSettings();
     this.refresh();
+  }
+
+  /* The ranked list beside the map.
+   *
+   * The map answers "what shape is my attention"; it does not answer "which
+   * five notes, in order". The score was computed for every node anyway and
+   * was only ever drawn as a radius, so the list says out loud what the map
+   * has always known.
+   *
+   * The heading names the number. There are two attention numbers in this
+   * scaffold -- this one and the journal-link count the vault script
+   * computes -- and an unlabelled list of topics invites a reader to take
+   * one for the other. */
+  buildList(parent) {
+    this.listEl = parent.createDiv('ifocus-list');
+    this.listEl.createDiv({ cls: 'ifocus-list-head', text: 'ATTENTION (FOCUS SCORE)' });
+    this.listSubEl = this.listEl.createDiv({ cls: 'ifocus-list-sub' });
+    this.listRowsEl = this.listEl.createDiv('ifocus-list-rows');
+  }
+
+  /* One row per node: rank, name, score, last seen. Clicking or pressing
+   * Enter opens the note, the same contract a click on the map has.
+   *
+   * The row is a div carrying role, tabindex and a key handler rather than
+   * a bare clickable div, for the reason the launcher gives: a surface the
+   * keyboard cannot reach is a surface half the people cannot use. */
+  renderList() {
+    if (!this.listEl) return;
+    const s = this.plugin.settings;
+    this.listEl.toggleClass('is-hidden', !s.showList);
+    if (!s.showList) return;
+
+    const rows = topAttention(this.model.nodes, s.listCount);
+    this.listSubEl.setText(`top ${rows.length} · today + ${this.model.windowDays} days`);
+    this.listRowsEl.empty();
+    if (!rows.length) {
+      this.listRowsEl.createDiv({ cls: 'ifocus-list-empty', text: 'Nothing in the window yet.' });
+      return;
+    }
+    rows.forEach((node, i) => {
+      const row = this.listRowsEl.createDiv('ifocus-list-row');
+      row.setAttr('role', 'button');
+      row.setAttr('tabindex', '0');
+      const sig = node.signals || {};
+      const breakdown = `edits ${round3(sig.edits || 0)}, mentions ${round3(sig.mentions || 0)}, `
+        + `backlinks ${round3(sig.backlinks || 0)}, opens ${round3(sig.opens || 0)}`;
+      row.setAttr('aria-label', `${node.name}, Focus score ${round3(node.score)}, last seen `
+        + `${dayKeyAgo(node.lastDay, new Date())}. Open the note. Score from ${breakdown}.`);
+      row.createDiv({ cls: 'ifocus-list-rank', text: String(i + 1) });
+      const mid = row.createDiv('ifocus-list-mid');
+      const name = mid.createDiv({ cls: 'ifocus-list-name', text: node.name });
+      const t = TYPES[node.type];
+      if (t) name.style.setProperty('--row-color', t.color);
+      mid.createDiv({ cls: 'ifocus-list-day', text: dayKeyAgo(node.lastDay, new Date()) });
+      row.createDiv({ cls: 'ifocus-list-score', text: round3(node.score).toFixed(1) });
+      /* Exactly what a click on the node does (see the pointer release
+         handler): the same path, the same leaf, so the two surfaces cannot
+         drift into two behaviours. */
+      const open = () => {
+        const f = this.plugin.app.vault.getAbstractFileByPath(node.path);
+        if (f instanceof TFile) this.plugin.app.workspace.getLeaf('tab').openFile(f);
+      };
+      this.registerDomEvent(row, 'click', open);
+      this.registerDomEvent(row, 'keydown', (evt) => {
+        if (evt.key !== 'Enter' && evt.key !== ' ') return;
+        evt.preventDefault();
+        open();
+      });
+    });
   }
 
   /* The floating display-and-forces panel, graph-view style. */
@@ -518,8 +696,13 @@ class FocusView extends ItemView {
     /* opens is device-local now (see the plugin's deviceOpens); merge the
        frozen historical log back in for the render without mutating either
        source or the persisted settings object. */
+    const now = new Date();
     const merged = Object.assign({}, s, { opens: mergeOpens(s.opens, this.plugin.deviceOpens) });
-    let model = buildModel(this.plugin.app, merged, new Date());
+    let model = buildModel(this.plugin.app, merged, now);
+    /* Every recompute writes the machine-layer file, and it writes the WHOLE
+       model: the page toggle below is one person's view of the map, not a
+       fact about the vault, and a reader of the file must not inherit it. */
+    this.plugin.writeAttention(model, now);
     if (s.entitiesOnly) {
       const keep = new Set(model.nodes.filter((n) => n.entity).map((n) => n.path));
       model = {
@@ -559,6 +742,7 @@ class FocusView extends ItemView {
       row.createDiv({ cls: 'ifocus-lg-name', text: t.label });
     }
     if (model.nodes.length) this.emptyEl.hide(); else this.emptyEl.show();
+    this.renderList();
   }
 
   resize() {
@@ -911,11 +1095,7 @@ class IcorFocusPlugin extends Plugin {
     }));
 
     // live refresh of any open focus view when the vault changes
-    const kick = debounce(() => {
-      for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOCUS)) {
-        if (leaf.view instanceof FocusView) leaf.view.refresh();
-      }
-    }, 900, true);
+    const kick = debounce(() => this.refreshViews(), 900, true);
     this.registerEvent(this.app.vault.on('modify', kick));
     this.registerEvent(this.app.vault.on('create', kick));
     this.registerEvent(this.app.vault.on('delete', kick));
@@ -937,6 +1117,45 @@ class IcorFocusPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('layout-change', () => this.mountLauncher()));
 
     this.saveSoon = debounce(() => this.saveDeviceOpens(), 4000, true);
+  }
+
+  /* Recompute every open map. A settings change that alters the score or
+     the list has to land on the page the person is looking at, and on the
+     written file with it. */
+  refreshViews() {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOCUS)) {
+      if (leaf.view instanceof FocusView) leaf.view.refresh();
+    }
+  }
+
+  /* Write the ranked model to the machine layer (GL-1008).
+   *
+   * Four rules from the guideline, all of them load-bearing:
+   *   - the adapter, never the Vault API and never `fs`: a dot folder is
+   *     invisible to the Vault API, and the adapter is the same call on a
+   *     phone;
+   *   - `exists` then `mkdir` every time, because a vault that arrived on a
+   *     second device through Obsidian Sync does not have the folder (Sync
+   *     skips dot folders) and a vault built by hand never had it;
+   *   - only this plugin's own `<plugin-id>/` subfolder;
+   *   - the file is regenerated, never a source. Delete it and the next
+   *     recompute brings it back whole.
+   *
+   * A failed write is logged once and swallowed: the map is the product and
+   * a read-only or full disk must not take it down. */
+  async writeAttention(model, now) {
+    const adapter = this.app.vault && this.app.vault.adapter;
+    if (!adapter) return;
+    try {
+      for (const dir of [META_DIR, ATTENTION_DIR]) {
+        const p = normalizePath(dir);
+        if (!(await adapter.exists(p))) await adapter.mkdir(p);
+      }
+      const payload = attentionPayload(model, this.settings, now);
+      await adapter.write(normalizePath(ATTENTION_PATH), JSON.stringify(payload, null, 2));
+    } catch (err) {
+      console.warn(`ICOR for Life - Focus: could not write ${ATTENTION_PATH}`, err);
+    }
   }
 
   reportMissingRooms() {
@@ -1067,6 +1286,43 @@ class IcorFocusSettingTab extends PluginSettingTab {
           this.plugin.settings.showLinks = v;
           await this.plugin.saveSettings();
         }));
+
+    new Setting(containerEl).setName('What counts').setHeading();
+    new Setting(containerEl)
+      .setName('Count file edits')
+      .setDesc('On, a file being edited counts towards its score. Turn it off in a vault '
+        + 'where scripts rewrite many notes at once: one bulk pass stamps the same edit '
+        + 'time on hundreds of files, and the score then measures the script instead of '
+        + 'you. Off, only mentions in daily notes, backlinks and your own opens count.')
+      .addToggle((t) => t.setValue(this.plugin.settings.countFileEdits !== false)
+        .onChange(async (v) => {
+          this.plugin.settings.countFileEdits = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshViews();
+        }));
+
+    new Setting(containerEl).setName('The list').setHeading();
+    new Setting(containerEl)
+      .setName('Show the ranked list')
+      .setDesc('The list beside the map, highest score first.')
+      .addToggle((t) => t.setValue(this.plugin.settings.showList !== false)
+        .onChange(async (v) => {
+          this.plugin.settings.showList = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshViews();
+        }));
+    new Setting(containerEl)
+      .setName('Rows in the list')
+      .setDesc('How many notes the list shows. The written file always carries every '
+        + 'note in the window, whatever this says.')
+      .addSlider((sl) => sl.setLimits(3, 30, 1)
+        .setValue(this.plugin.settings.listCount || 10)
+        .setDynamicTooltip()
+        .onChange(async (v) => {
+          this.plugin.settings.listCount = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshViews();
+        }));
   }
 }
 
@@ -1078,4 +1334,6 @@ module.exports.__test = {
   isExcluded, buildModel, bandLayout, angleOf, nodeRadius, TYPES,
   traceShape, labelAlphaOf, mergeOpens, pruneOpensLog, OPENS_STORAGE_KEY,
   DEFAULT_SETTINGS, FocusView, IcorFocusPlugin, VIEW_TYPE_FOCUS,
+  rankNodes, topAttention, attentionItem, attentionPayload, dayKeyAgo, round3,
+  SIGNAL_WEIGHTS, META_DIR, ATTENTION_DIR, ATTENTION_PATH, ATTENTION_SCHEMA,
 };

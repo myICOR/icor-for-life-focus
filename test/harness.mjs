@@ -48,18 +48,44 @@ function makeBus() {
   };
 }
 
-export function makeApp({ localStorageSeed = {}, markdownFiles = [] } = {}) {
+/* A stand-in for `vault.adapter`: the only way a plugin may reach the hidden
+   machine layer (GL-1008). It records every call in order, so a gate can
+   assert that `exists` came before `mkdir` and that nothing was written
+   outside this plugin's own subfolder. `failOn` makes one operation throw,
+   which is how the write-must-not-take-the-map-down case is proven. */
+export function makeAdapter({ existing = [], failOn = null } = {}) {
+  const dirs = new Set(existing);
+  const files = new Map();
+  const calls = [];
+  const guard = (op, path) => {
+    calls.push([op, path]);
+    if (failOn === op) throw new Error(`adapter.${op} refused`);
+  };
+  return {
+    async exists(path) { guard('exists', path); return dirs.has(path) || files.has(path); },
+    async mkdir(path) { guard('mkdir', path); dirs.add(path); },
+    async write(path, data) { guard('write', path); files.set(path, data); },
+    async read(path) { guard('read', path); return files.get(path); },
+    async list(path) { guard('list', path); return { files: [...files.keys()], folders: [...dirs] }; },
+    _calls: calls,
+    _files: files,
+    _dirs: dirs,
+  };
+}
+
+export function makeApp({ localStorageSeed = {}, markdownFiles = [], resolvedLinks = {}, adapter = makeAdapter() } = {}) {
   const workspaceBus = makeBus();
   const vaultBus = makeBus();
   const metadataCacheBus = makeBus();
   return {
     vault: {
+      adapter,
       getMarkdownFiles: () => markdownFiles,
       getRoot: () => ({ children: [] }),
       on: vaultBus.on,
       _emit: vaultBus._emit,
     },
-    metadataCache: { resolvedLinks: {}, on: metadataCacheBus.on, _emit: metadataCacheBus._emit },
+    metadataCache: { resolvedLinks, on: metadataCacheBus.on, _emit: metadataCacheBus._emit },
     workspace: {
       onLayoutReady: () => {},
       on: workspaceBus.on,
@@ -94,6 +120,9 @@ function makeObsidian() {
     Notice: class { constructor(msg) { this.msg = msg; } },
     TFile: class { constructor(path) { this.path = path; } },
     setIcon: () => {},
+    /* Obsidian's normalizePath trims and collapses slashes; the gates only
+       need it to be the identity on an already-clean path. */
+    normalizePath: (p) => p.replace(/\/+/g, '/').replace(/^\/|\/$/g, ''),
     /* synchronous passthrough -- see file header */
     debounce: (fn) => fn,
   };
