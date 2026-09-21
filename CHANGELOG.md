@@ -6,6 +6,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.7.0] - 2026-09-21
+
+### Changed
+- Relicensed under MIT. Releases before 0.7.0 remain under the ICOR for Life
+  Source-Available License (Code) v1.0.
+- Release workflow: the guard job's checkout pinned to a commit SHA.
+
 ## [0.6.0] - 2026-09-15
 
 ### Added
