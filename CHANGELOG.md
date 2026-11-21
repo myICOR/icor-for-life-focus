@@ -6,6 +6,22 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.7.1] - 2026-11-21
+
+### Fixed
+- **The map no longer slows Obsidian down.** Its drawing loop ran every
+  frame for as long as a Focus tab existed, even in the background, and
+  compared every drawn note with every other. It now sleeps once the map
+  has settled or when the tab is hidden, and wakes on a pointer, a zoom, a
+  refresh or when the tab comes back.
+- **At most 300 notes are drawn**, the ones that score highest; the
+  header says how many more there are. `attention.json` still holds the
+  whole ranking.
+- **A hidden map does not recompute** on every vault change; it catches up
+  when it is shown.
+- **`attention.json` is written only when the ranking changed**, not every
+  few seconds while you type.
+
 ## [0.7.0] - 2026-09-21
 
 ### Changed
