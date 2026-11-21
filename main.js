@@ -456,6 +456,36 @@ function attentionPayload(model, settings, now) {
   };
 }
 
+/* The map draws at most this many notes. The separation step compares every
+ * drawn note with every other, so the cost grows with the square of the
+ * count: 300 notes is ~45,000 pairs a frame, 3,000 would be ~4.5 million.
+ * The machine-layer file keeps the whole ranked model; only the drawing is
+ * capped, keeping the notes that score highest. */
+const MAX_MAP_NODES = 300;
+
+function capForMap(model, max) {
+  const limit = max > 0 ? max : MAX_MAP_NODES;
+  if (model.nodes.length <= limit) return Object.assign({}, model, { hidden: 0 });
+  const keep = new Set(model.nodes.slice()
+    .sort((a, b) => (b.score - a.score) || (a.lastDay - b.lastDay) || (a.path < b.path ? -1 : 1))
+    .slice(0, limit)
+    .map((n) => n.path));
+  return {
+    nodes: model.nodes.filter((n) => keep.has(n.path)),
+    edges: model.edges.filter(([a, b]) => keep.has(a) && keep.has(b)),
+    windowDays: model.windowDays,
+    hidden: model.nodes.length - keep.size,
+  };
+}
+
+/* Whether the drawing loop asks for another frame. It sleeps when the map
+ * has settled or is not on screen (a background tab, a closed view); a
+ * pointer, a zoom, a refresh or the tab coming back wakes it. */
+function loopShouldRun({ connected, visible, energy, needsKick }) {
+  if (!connected || !visible) return false;
+  return energy > 0.25 || needsKick > 0;
+}
+
 /* Ring geometry: dynamic band widths. Busy days wide, empty days thin,
  * so chips never cross ring boundaries. Returns per-day inner radius, width,
  * and center radius, plus the total outer radius. */
@@ -560,7 +590,27 @@ class FocusView extends ItemView {
     this.ro.observe(this.stage);
 
     this.refresh();
-    this.loop();
+    this.wake();
+  }
+
+  /* Obsidian calls this when the leaf is shown or resized: a map that was
+   * hidden catches up on the vault changes it skipped, then draws again. */
+  onResize() {
+    if (this.dirty) this.refresh();
+    this.kick(2);
+  }
+
+  isVisible() {
+    return !!(this.canvas && this.canvas.isConnected && this.canvas.offsetParent !== null);
+  }
+
+  kick(frames) {
+    this.needsKick = Math.max(this.needsKick || 0, frames);
+    this.wake();
+  }
+
+  wake() {
+    if (!this.raf && this.canvas) this.loop();
   }
 
   async onClose() {
@@ -648,7 +698,7 @@ class FocusView extends ItemView {
   buildPanel() {
     const s = this.plugin.settings;
     this.panel = this.stage.createDiv('ifocus-panel');
-    const save = () => { this.plugin.saveSettings(); this.needsKick = Math.max(this.needsKick, 90); };
+    const save = () => { this.plugin.saveSettings(); this.kick(90); };
 
     const slider = (label, min, max, step, get, set) => {
       const row = this.panel.createDiv('ifocus-p-row');
@@ -703,12 +753,15 @@ class FocusView extends ItemView {
        model: the page toggle below is one person's view of the map, not a
        fact about the vault, and a reader of the file must not inherit it. */
     this.plugin.writeAttention(model, now);
+    this.dirty = false;
+    model = capForMap(model, s.maxMapNodes);
     if (s.entitiesOnly) {
       const keep = new Set(model.nodes.filter((n) => n.entity).map((n) => n.path));
       model = {
         nodes: model.nodes.filter((n) => keep.has(n.path)),
         edges: model.edges.filter(([a, b]) => keep.has(a) && keep.has(b)),
         windowDays: model.windowDays,
+        hidden: model.hidden,
       };
     }
     this.model = model;
@@ -726,10 +779,11 @@ class FocusView extends ItemView {
         : { node: n, x: tx * 1.35, y: ty * 1.35, vx: 0, vy: 0, tx, ty, ta: a });
     }
     this.sim = next;
-    this.needsKick = 120;
+    this.kick(120);
 
     // header + segment state + legend
-    this.subEl.setText(`today + ${model.windowDays} days · ${model.nodes.length} items`);
+    this.subEl.setText(`today + ${model.windowDays} days · ${model.nodes.length} items`
+      + (model.hidden ? ` · the top ${model.nodes.length} shown, ${model.hidden} more in attention.json` : ''));
     this.segAll.toggleClass('is-on', !s.entitiesOnly);
     this.segEnt.toggleClass('is-on', s.entitiesOnly);
     this.legend.empty();
@@ -752,7 +806,7 @@ class FocusView extends ItemView {
     this.canvas.height = Math.max(1, Math.round(rect.height * dpr));
     this.canvas.style.width = rect.width + 'px';
     this.canvas.style.height = rect.height + 'px';
-    this.needsKick = Math.max(this.needsKick, 2);
+    this.kick(2);
   }
 
   /* stage px -> world coords */
@@ -811,7 +865,7 @@ class FocusView extends ItemView {
         const after = this.toWorld(mx, my);
         this.pan.x += (after.x - before.x) * this.zoom;
         this.pan.y += (after.y - before.y) * this.zoom;
-        this.needsKick = Math.max(this.needsKick, 2);
+        this.kick(2);
         return;
       }
       if (this.drag) {
@@ -828,7 +882,7 @@ class FocusView extends ItemView {
           this.pan.y += py - this.drag.py;
           this.drag.px = px; this.drag.py = py;
         }
-        this.needsKick = Math.max(this.needsKick, 2);
+        this.kick(2);
         return;
       }
       if (e.pointerType === 'touch') return; // no hover state on touch
@@ -856,13 +910,13 @@ class FocusView extends ItemView {
           });
         }
       } else this.tip.hide();
-      this.needsKick = Math.max(this.needsKick, 1);
+      this.kick(1);
     });
     const release = (e, mayOpen) => {
       this.pointers.delete(e.pointerId);
       if (this.pinch) {
         if (this.pointers.size < 2) this.pinch = null;
-        this.needsKick = Math.max(this.needsKick, 10);
+        this.kick(10);
         return;
       }
       const d = this.drag;
@@ -871,7 +925,7 @@ class FocusView extends ItemView {
         const f = this.plugin.app.vault.getAbstractFileByPath(d.s.node.path);
         if (f instanceof TFile) this.plugin.app.workspace.getLeaf('tab').openFile(f);
       }
-      this.needsKick = Math.max(this.needsKick, 30);
+      this.kick(30);
     };
     this.registerDomEvent(c, 'pointerup', (e) => release(e, true));
     this.registerDomEvent(c, 'pointercancel', (e) => release(e, false));
@@ -885,7 +939,7 @@ class FocusView extends ItemView {
       const after = this.toWorld(px, py);
       this.pan.x += (after.x - before.x) * this.zoom;
       this.pan.y += (after.y - before.y) * this.zoom;
-      this.needsKick = Math.max(this.needsKick, 2);
+      this.kick(2);
     }, { passive: false });
   }
 
@@ -1050,13 +1104,15 @@ class FocusView extends ItemView {
 
   loop() {
     const tick = () => {
-      this.raf = requestAnimationFrame(tick);
-      if (!this.canvas.isConnected) return;
+      this.raf = 0;
+      const connected = !!this.canvas.isConnected;
+      const visible = this.isVisible();
+      if (!connected || !visible) return;          /* asleep until kick() */
       const energy = this.step();
-      if (energy > 0.25 || this.needsKick > 0) {
-        this.needsKick = Math.max(0, this.needsKick - 1);
-        this.draw();
-      }
+      if (!loopShouldRun({ connected, visible, energy, needsKick: this.needsKick })) return;
+      this.needsKick = Math.max(0, this.needsKick - 1);
+      this.draw();
+      this.raf = requestAnimationFrame(tick);
     };
     this.raf = requestAnimationFrame(tick);
   }
@@ -1124,7 +1180,9 @@ class IcorFocusPlugin extends Plugin {
      written file with it. */
   refreshViews() {
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOCUS)) {
-      if (leaf.view instanceof FocusView) leaf.view.refresh();
+      if (!(leaf.view instanceof FocusView)) continue;
+      if (leaf.view.isVisible()) leaf.view.refresh();
+      else leaf.view.dirty = true;
     }
   }
 
@@ -1152,7 +1210,13 @@ class IcorFocusPlugin extends Plugin {
         if (!(await adapter.exists(p))) await adapter.mkdir(p);
       }
       const payload = attentionPayload(model, this.settings, now);
+      /* Unchanged content is not written again (autosave fires vault events
+       * every few seconds while someone types). generated_at is left out of
+       * the comparison, so the file's date says when the ranking last moved. */
+      const sameAs = JSON.stringify(Object.assign({}, payload, { generated_at: null }));
+      if (sameAs === this.lastAttention) return;
       await adapter.write(normalizePath(ATTENTION_PATH), JSON.stringify(payload, null, 2));
+      this.lastAttention = sameAs;
     } catch (err) {
       console.warn(`ICOR for Life - Focus: could not write ${ATTENTION_PATH}`, err);
     }
@@ -1335,5 +1399,6 @@ module.exports.__test = {
   traceShape, labelAlphaOf, mergeOpens, pruneOpensLog, OPENS_STORAGE_KEY,
   DEFAULT_SETTINGS, FocusView, IcorFocusPlugin, VIEW_TYPE_FOCUS,
   rankNodes, topAttention, attentionItem, attentionPayload, dayKeyAgo, round3,
+  MAX_MAP_NODES, capForMap, loopShouldRun,
   SIGNAL_WEIGHTS, META_DIR, ATTENTION_DIR, ATTENTION_PATH, ATTENTION_SCHEMA,
 };
