@@ -6,6 +6,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.8.2] - 2026-11-23
+
+### Changed
+- **The Focus map opens from the ribbon on the left.** The icon under the
+  ICOR for Life banner in the file tree is gone (Tom, 2026-11-23: every
+  plugin's launcher moves to Obsidian's own ribbon). Click the Focus icon in
+  the ribbon, or run **Open the Focus map** from the command palette. Like any
+  ribbon icon, you can move or hide it in Settings, Appearance, Ribbon menu.
+
 ## [0.8.1] - 2026-11-23
 
 Ready for the Obsidian community directory's review.

@@ -679,8 +679,8 @@ class FocusView extends ItemView {
    * Enter opens the note, the same contract a click on the map has.
    *
    * The row is a div carrying role, tabindex and a key handler rather than
-   * a bare clickable div, for the reason the launcher gives: a surface the
-   * keyboard cannot reach is a surface half the people cannot use. */
+   * a bare clickable div: a surface the keyboard cannot reach is a surface
+   * half the people cannot use. */
   renderList() {
     if (!this.listEl) return;
     const s = this.plugin.settings;
@@ -1162,6 +1162,10 @@ class IcorFocusPlugin extends Plugin {
       name: 'Open the Focus map',
       callback: () => this.openFocus(),
     });
+    /* The entry point is Obsidian's own ribbon (Tom, 2026-11-23), so a member
+       can reorder or hide it in Settings, Appearance, Ribbon menu. Same words
+       and same function as the command; Obsidian removes it on unload. */
+    this.addRibbonIcon('focus', 'Open the Focus map', () => this.openFocus());
     this.addSettingTab(new IcorFocusSettingTab(this.app, this));
 
     // instant page previews from the map, no modifier key needed
@@ -1201,10 +1205,6 @@ class IcorFocusPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => this.reportMissingFolders());
     /* The folder names are known once the layout is ready. */
     this.app.workspace.onLayoutReady(() => this.adoptDefaults());
-
-    // the launcher under the ICOR for Life banner
-    this.app.workspace.onLayoutReady(() => this.mountLauncher());
-    this.registerEvent(this.app.workspace.on('layout-change', () => this.mountLauncher()));
 
     this.saveSoon = debounce(() => this.saveDeviceOpens(), 4000, true);
   }
@@ -1284,43 +1284,8 @@ class IcorFocusPlugin extends Plugin {
     this.refreshViews();
   }
 
-  onunload() {
-    for (const el of document.querySelectorAll('.ifocus-launcher')) el.remove();
-  }
-
   pruneOpens() {
     pruneOpensLog(this.deviceOpens);
-  }
-
-  /* Icon-only launcher inside the file explorer's tool-button row.
-   *
-   * This row rather than the ribbon, because the ICOR for Life scaffold hides
-   * the left ribbon and an icon on a hidden surface is not an entry point.
-   * The palette keeps `Open the Focus map` either way, so this is a second
-   * route rather than the only one - but it is the only VISIBLE one.
-   *
-   * The role, the tabindex and the key handler are deliberately MORE than
-   * Obsidian's own `addNavButton`, which makes a bare div with a click
-   * listener and no tab stop. The INKLINE theme already ships a
-   * `:focus-visible` ring for this slot, and a ring nothing can ever focus is
-   * a rule that reads as enforced and never fires. */
-  mountLauncher() {
-    for (const leaf of this.app.workspace.getLeavesOfType('file-explorer')) {
-      const row = leaf.view && leaf.view.containerEl
-        && leaf.view.containerEl.querySelector('.nav-buttons-container');
-      if (!row || row.querySelector('.ifocus-launcher')) continue;
-      const btn = row.createDiv({ cls: 'clickable-icon nav-action-button ifocus-launcher' });
-      setIcon(btn, 'focus');
-      btn.setAttr('aria-label', 'Open the Focus map');
-      btn.setAttr('role', 'button');
-      btn.setAttr('tabindex', '0');
-      this.registerDomEvent(btn, 'click', () => this.openFocus());
-      this.registerDomEvent(btn, 'keydown', (evt) => {
-        if (evt.key !== 'Enter' && evt.key !== ' ') return;
-        evt.preventDefault();
-        this.openFocus();
-      });
-    }
   }
 
   async openFocus() {

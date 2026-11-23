@@ -23,8 +23,9 @@ than what you remember doing.
 
 ## Getting started
 
-Click **FOCUS** under the ICOR for Life banner in the file tree, or run
-**Open the Focus map** from the command palette.
+Click the Focus icon in the ribbon on the left, or run **Open the Focus
+map** from the command palette. You can move or hide the icon in Settings,
+Appearance, Ribbon menu.
 
 There is nothing to set up and nothing to configure. The map draws itself
 from what is already in your vault.
