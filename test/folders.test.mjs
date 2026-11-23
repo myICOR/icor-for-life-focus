@@ -117,7 +117,7 @@ test('missing folders are named by their 3.0 names, by full name, never by numbe
 
 test('the notice says folder, and no string the plugin shows says room', () => {
   assert.equal(__test.missingFoldersMessage(['02 Inner World']),
-    'ICOR for Life - Focus: this vault has no 02 Inner World folder. Those notes will be drawn as ordinary notes until the folder is there.');
+    'ICOR Focus: this vault has no 02 Inner World folder. Those notes will be drawn as ordinary notes until the folder is there.');
   assert.match(__test.missingFoldersMessage(['02 Inner World', '06 Planner']), /no 02 Inner World, 06 Planner folders\. .* until the folders are there\./);
   /* Every string literal in main.js, comments skipped. */
   const strings = [];

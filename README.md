@@ -1,4 +1,4 @@
-# ICOR for Life - Focus
+# ICOR Focus
 
 **See where your attention actually went.**
 

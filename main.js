@@ -1,4 +1,4 @@
-/* ICOR for Life - Focus - a user-centered gravity map of the Lifeworld.
+/* ICOR Focus - a user-centered gravity map of the Lifeworld.
  *
  * Principle: the user sits in the center; everything they interacted with
  * orbits them.
@@ -222,7 +222,7 @@ function missingFolders(topLevelFolderNames) {
 /* What the member is told, once, when folders are missing. */
 function missingFoldersMessage(missing) {
   const one = missing.length === 1;
-  return `ICOR for Life - Focus: this vault has no ${missing.join(', ')} folder${one ? '' : 's'}. `
+  return `ICOR Focus: this vault has no ${missing.join(', ')} folder${one ? '' : 's'}. `
     + `Those notes will be drawn as ordinary notes until the folder${one ? ' is' : 's are'} there.`;
 }
 
@@ -1171,7 +1171,7 @@ class IcorFocusPlugin extends Plugin {
     // instant page previews from the map, no modifier key needed
     if (typeof this.registerHoverLinkSource === 'function') {
       this.registerHoverLinkSource('icor-focus', {
-        display: 'ICOR for Life - Focus', defaultMod: false,
+        display: 'ICOR Focus', defaultMod: false,
       });
     }
 
@@ -1252,7 +1252,7 @@ class IcorFocusPlugin extends Plugin {
       await adapter.write(normalizePath(ATTENTION_PATH), JSON.stringify(payload, null, 2));
       this.lastAttention = sameAs;
     } catch (err) {
-      console.warn(`ICOR for Life - Focus: could not write ${ATTENTION_PATH}`, err);
+      console.warn(`ICOR Focus: could not write ${ATTENTION_PATH}`, err);
     }
   }
 

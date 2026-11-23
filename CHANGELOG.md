@@ -6,6 +6,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.8.3] - 2026-11-23
+
+### Changed
+- The display name is now ICOR Focus (it was ICOR for Life - Focus). The plugin id stays `icor-for-life-focus`, so installed vaults, settings and hotkeys carry on unchanged.
+
 ## [0.8.2] - 2026-11-23
 
 ### Changed
