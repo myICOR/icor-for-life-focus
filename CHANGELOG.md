@@ -6,6 +6,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.8.1] - 2026-11-23
+
+Ready for the Obsidian community directory's review.
+
+### Changed
+- The map asks its own window for animation frames, so it keeps time in a
+  popout window too. The 0.7.1 release is merged into this line.
+
 ## [0.8.0] - 2026-11-23
 
 ### Changed

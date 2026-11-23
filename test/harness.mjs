@@ -136,7 +136,7 @@ export function loadPlugin() {
     require: (name) => (name === 'obsidian' ? obsidian : nodeRequire(name)),
     module: { exports: {} },
     document: { querySelectorAll: () => [] },
-    window: {},
+    window: { requestAnimationFrame: () => 0, cancelAnimationFrame: () => {} },
     console, setTimeout, clearTimeout,
     JSON, Date, Math, Number, String, Array, Object, Map, Set, Promise, RegExp,
     requestAnimationFrame: () => 0,

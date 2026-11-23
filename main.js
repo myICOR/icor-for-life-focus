@@ -646,7 +646,7 @@ class FocusView extends ItemView {
   }
 
   async onClose() {
-    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.raf) window.cancelAnimationFrame(this.raf);
     this.raf = 0;
     if (this.ro) this.ro.disconnect();
   }
@@ -1144,9 +1144,9 @@ class FocusView extends ItemView {
       if (!loopShouldRun({ connected, visible, energy, needsKick: this.needsKick })) return;
       this.needsKick = Math.max(0, this.needsKick - 1);
       this.draw();
-      this.raf = requestAnimationFrame(tick);
+      this.raf = window.requestAnimationFrame(tick);
     };
-    this.raf = requestAnimationFrame(tick);
+    this.raf = window.requestAnimationFrame(tick);
   }
 }
 
