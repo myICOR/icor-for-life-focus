@@ -1,16 +1,5 @@
 /* ICOR for Life - Focus - INKLINE grammar. Every token falls back for vanilla themes. */
 
-/* ------------------------------------------------------------ launcher */
-
-/* Icon-only, sits in the file explorer's tool-button row, marker orange. */
-.ifocus-launcher.nav-action-button {
-  color: var(--ink-marker, #ff5a2d);
-}
-.ifocus-launcher.nav-action-button:hover {
-  color: var(--ink-marker-up, #ff7248);
-  background: var(--ink-marker-soft, rgba(255, 90, 45, 0.13));
-}
-
 /* ------------------------------------------------------------ page */
 
 .ifocus-root {

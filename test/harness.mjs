@@ -105,6 +105,11 @@ function makeObsidian() {
     registerEvent(e) { this._events.push(e); }
     registerDomEvent() {}
     addCommand(c) { (this.commands || (this.commands = [])).push(c); }
+    addRibbonIcon(icon, title, callback) {
+      const el = { icon, title, callback };
+      (this.ribbons || (this.ribbons = [])).push(el);
+      return el;
+    }
     addSettingTab() {}
     registerView(type, factory) { (this.views || (this.views = {}))[type] = factory; }
   }
