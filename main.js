@@ -36,7 +36,7 @@ const SIGNAL_WEIGHTS = { mentions: 3, edits: 2, opens: 2, backlinks: 1 };
 
 const DEFAULT_SETTINGS = {
   windowDays: 7,            // past days shown beyond today
-  excludeFolders: ['05 Assets'],
+  excludeFolders: ['04 Assets'],   // files only, no notes (ICOR for Life 3.0; 05 Assets before)
   includeReadmes: false,
   showLinks: true,
   entitiesOnly: false,      // page toggle, persisted
@@ -80,8 +80,9 @@ const TYPES = {
   'company':     { label: 'Companies',    color: '#7f6fae', entity: true, shape: 'sqring' },
   'journal':     { label: 'Journal',      color: '#8e897d', entity: false, shape: 'dot' },
   'planner':     { label: 'Planner',      color: '#c2765a', entity: false, shape: 'dot' },
-  'wip':         { label: 'WiP',          color: '#7a99a1', entity: false, shape: 'dot' },
   'inbox':       { label: 'Inbox',        color: '#b0855e', entity: false, shape: 'dot' },
+  /* Only a 2.x vault has this folder (see FOLDER_CLASS); the legend shows a
+     type only when a note of it is on the map, so a 3.0 vault never sees it. */
   'ai-team':     { label: 'AI Team',      color: '#8087a6', entity: false, shape: 'dot' },
   'note':        { label: 'Notes',        color: '#6d6a61', entity: false, shape: 'dot' },
 };
@@ -142,34 +143,45 @@ function labelAlphaOf(mode, zoom, threshold, entity, isHover) {
   return Math.max(0, Math.min(1, (zoom - threshold) * 2)) * base;
 }
 
-/* A ROOM IS ITS NUMBER. THE WORDS AFTER IT ARE A LABEL.
+/* A FOLDER IS ITS FULL NAME. NEVER ITS NUMBER.
  *
- * This table used to be thirteen full-path literals. When `01 INBOX` was
- * renamed `01 Inbox` to match its title-case siblings, every literal naming it
- * stopped matching, in silence, because a prefix test that matches nothing
- * raises nothing: a whole room was quietly classified as 'note' and the
- * gravity map simply stopped colouring it. Correcting the literal would have
- * left the same trap armed for the next rename, and there will be one. The
- * SAME two-character edit cost 27 files and 21 CSS selectors elsewhere.
+ * Up to 0.7.1 a top-level folder was classified by its number prefix, so a
+ * renamed folder kept its colour. ICOR for Life 3.0 renumbered the folders and
+ * groups them by stage: Input (00 Daily Notes, 01 Inbox), Control (02 Inner
+ * World, 03 Outer World, 04 Assets, 05 Databases), Output (06 Planner); Refine
+ * has no folder. A number now names a different folder depending on the
+ * vault's age: 02 was the Planner and is now the Inner World, 04 was the Inner
+ * World and is now Assets, and a 2.x vault's 06 AI Team shares its 06 with
+ * 3.0's 06 Planner. So a folder is matched by its full name: the 3.0 name,
+ * and the name a 2.x vault used, until it moves.
  *
- * The number is the part that does not move. It is the sort key, it is the
- * identity in every consumer's copy ("ROOM 01 - INBOX"), and it is what
- * survived this rename untouched. Match on it, and a room may be called
- * anything its owner likes.
- *
- * The structure BELOW a room is a separate contract that a room rename does not
- * touch, so 04's sub-paths stay as names. */
-const ROOM_CLASS = {
-  '00': 'journal',   // Daily Scratchpad
-  '01': 'inbox',
-  '02': 'planner',
-  '03': 'wip',
-  '06': 'ai-team',
+ * The structure BELOW the Inner World is a separate contract that the
+ * renumbering did not touch, so its sub-paths stay as names (INNER_CLASS). */
+const FOLDER_CLASS = {
+  '00 Daily Notes': 'journal',
+  '00 Daily Scratchpad': 'journal',   // a 2.x vault
+  '01 Inbox': 'inbox',
+  '01 INBOX': 'inbox',                // an older spelling
+  '06 Planner': 'planner',
+  '02 Planner': 'planner',            // a 2.x vault
+  /* A 2.x vault's team folder, read only so such a vault keeps its colours.
+     3.0 has none, and the full name keeps 06 Planner from being taken for it. */
+  '06 AI Team': 'ai-team',
 };
 
-/* Every room number this plugin depends on, so a missing one can be NAMED
- * rather than silently classified as an ordinary note. */
-const EXPECTED_ROOMS = Object.keys(ROOM_CLASS).concat(['04']).sort();
+/* The Inner World, whose sub-paths carry the entity types. */
+const INNER_WORLDS = ['02 Inner World', '04 Inner World' /* a 2.x vault */];
+
+/* Every folder this plugin depends on, by its 3.0 name and the names an older
+ * vault used, so a missing one can be NAMED rather than silently classified
+ * as an ordinary note. The Outer World, Assets and Databases are drawn as
+ * ordinary notes (or excluded), so their absence changes nothing here. */
+const EXPECTED_FOLDERS = [
+  { name: '00 Daily Notes', legacy: ['00 Daily Scratchpad'] },
+  { name: '01 Inbox', legacy: ['01 INBOX'] },
+  { name: '02 Inner World', legacy: ['04 Inner World'] },
+  { name: '06 Planner', legacy: ['02 Planner'] },
+];
 
 const INNER_CLASS = [
   ['My Life/Key Elements/', 'key-element'],
@@ -182,31 +194,51 @@ const INNER_CLASS = [
   ['Journal/', 'journal'],
 ];
 
-/* The room number a vault path sits in, or null when it sits in none. */
-function roomOf(path) {
-  const m = /^(\d{2})[^/]*\//.exec(path);
-  return m ? m[1] : null;
+/* The top-level folder a vault path sits in, or null for a note at the root. */
+function topFolderOf(path) {
+  const i = String(path).indexOf('/');
+  return i > 0 ? path.slice(0, i) : null;
 }
 
 function classifyPath(path) {
-  const room = roomOf(path);
-  if (room === '04') {
-    const rest = path.slice(path.indexOf('/') + 1);
+  const top = topFolderOf(path);
+  if (top && INNER_WORLDS.includes(top)) {
+    const rest = path.slice(top.length + 1);
     for (const [prefix, cls] of INNER_CLASS) if (rest.startsWith(prefix)) return cls;
     return 'note';
   }
-  return (room && ROOM_CLASS[room]) || 'note';
+  return (top && FOLDER_CLASS[top]) || 'note';
 }
 
-/* The rooms this plugin expects, and the ones the vault actually has.
- * Pure so it can be tested without a vault. */
-function missingRooms(topLevelFolderNames) {
-  const present = new Set();
-  for (const name of topLevelFolderNames) {
-    const m = /^(\d{2})/.exec(name);
-    if (m) present.add(m[1]);
-  }
-  return EXPECTED_ROOMS.filter((n) => !present.has(n));
+/* The folders this plugin expects that the vault does not have, by their
+ * 3.0 names. Pure so it can be tested without a vault. */
+function missingFolders(topLevelFolderNames) {
+  const present = new Set(topLevelFolderNames);
+  return EXPECTED_FOLDERS
+    .filter((f) => ![f.name, ...f.legacy].some((n) => present.has(n)))
+    .map((f) => f.name);
+}
+
+/* What the member is told, once, when folders are missing. */
+function missingFoldersMessage(missing) {
+  const one = missing.length === 1;
+  return `ICOR for Life - Focus: this vault has no ${missing.join(', ')} folder${one ? '' : 's'}. `
+    + `Those notes will be drawn as ordinary notes until the folder${one ? ' is' : 's are'} there.`;
+}
+
+/* A saved "Excluded folders" that still equals the old default keeps working
+ * (ICOR for Life 3.0 moved 05 Assets to 04 Assets): as saved while the vault
+ * still has 05 Assets, the new name once the vault has 04 Assets instead.
+ * Anything the member changed is left exactly as it is. Returns the list to
+ * use; the caller saves it when it differs. */
+const OLD_DEFAULT_EXCLUDE = ['05 Assets'];
+function adoptExcludeFolders(saved, hasFolder) {
+  const same = Array.isArray(saved) && saved.length === OLD_DEFAULT_EXCLUDE.length
+    && saved.every((f, i) => f === OLD_DEFAULT_EXCLUDE[i]);
+  if (!same) return saved;
+  if (hasFolder('05 Assets')) return saved;
+  if (hasFolder('04 Assets')) return ['04 Assets'];
+  return saved;
 }
 
 /* ---------------------------------------------------------------- dates */
@@ -1158,15 +1190,17 @@ class IcorFocusPlugin extends Plugin {
     this.registerEvent(this.app.vault.on('rename', kick));
     this.registerEvent(this.app.metadataCache.on('resolved', kick));
 
-    /* A ROOM THAT IS NOT THERE MUST SAY SO.
+    /* A FOLDER THAT IS NOT THERE MUST SAY SO.
      *
-     * The failure this closes is not a crash, it is a shrug: before the room
-     * numbers above, a renamed room matched nothing and the map lost a whole
-     * class of note without a single line in the console. A contract keyed on a
-     * value someone else can change has to announce it when it breaks, or the
-     * plugin just quietly does less and everybody assumes that is the shape of
-     * the vault. Said once, at load, and never again. */
-    this.app.workspace.onLayoutReady(() => this.reportMissingRooms());
+     * The failure this closes is not a crash, it is a shrug: a folder that
+     * matches nothing loses a whole class of note from the map without a
+     * single line in the console. A contract keyed on a value someone else can
+     * change has to announce it when it breaks, or the plugin just quietly
+     * does less and everybody assumes that is the shape of the vault. Said
+     * once, at load, and never again. */
+    this.app.workspace.onLayoutReady(() => this.reportMissingFolders());
+    /* The folder names are known once the layout is ready. */
+    this.app.workspace.onLayoutReady(() => this.adoptDefaults());
 
     // the launcher under the ICOR for Life banner
     this.app.workspace.onLayoutReady(() => this.mountLauncher());
@@ -1222,19 +1256,32 @@ class IcorFocusPlugin extends Plugin {
     }
   }
 
-  reportMissingRooms() {
-    const names = this.app.vault.getRoot().children
+  topLevelFolders() {
+    return this.app.vault.getRoot().children
       .filter((f) => f.children !== undefined)
       .map((f) => f.name);
-    // A vault with no numbered rooms at all is not a scaffold, and telling
-    // someone their plain vault is broken would be the louder wrong answer.
-    if (names.every((n) => !/^\d{2}/.test(n))) return;
-    const missing = missingRooms(names);
-    if (missing.length === 0) return;
-    const message = `ICOR for Life - Focus: this vault has no room ${missing.join(', ')}. `
-      + 'Those notes will be drawn as ordinary notes until the rooms are there.';
+  }
+
+  reportMissingFolders() {
+    const missing = missingFolders(this.topLevelFolders());
+    // A vault with none of these folders is not an ICOR for Life vault, and
+    // telling someone their plain vault is broken would be the louder wrong
+    // answer.
+    if (missing.length === 0 || missing.length === EXPECTED_FOLDERS.length) return;
+    const message = missingFoldersMessage(missing);
     console.warn(message);
     new Notice(message, 12000);
+  }
+
+  /* A saved setting that still equals an old default follows the folder's
+     move (see adoptExcludeFolders), and is saved once it does. */
+  async adoptDefaults() {
+    const names = new Set(this.topLevelFolders());
+    const next = adoptExcludeFolders(this.settings.excludeFolders, (n) => names.has(n));
+    if (next === this.settings.excludeFolders) return;
+    this.settings.excludeFolders = next;
+    await this.saveSettings();
+    this.refreshViews();
   }
 
   onunload() {
@@ -1393,7 +1440,8 @@ class IcorFocusSettingTab extends PluginSettingTab {
 module.exports = IcorFocusPlugin;
 module.exports.default = IcorFocusPlugin;
 module.exports.__test = {
-  classifyPath, roomOf, missingRooms, ROOM_CLASS, EXPECTED_ROOMS,
+  classifyPath, topFolderOf, missingFolders, missingFoldersMessage, adoptExcludeFolders,
+  FOLDER_CLASS, INNER_WORLDS, EXPECTED_FOLDERS,
   dayKeyOf, dayIndexOf, dayIndexOfMtime, makeAccumulator,
   isExcluded, buildModel, bandLayout, angleOf, nodeRadius, TYPES,
   traceShape, labelAlphaOf, mergeOpens, pruneOpensLog, OPENS_STORAGE_KEY,
