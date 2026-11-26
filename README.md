@@ -1,4 +1,4 @@
-# ICOR for Life - Focus
+# ICOR Focus
 
 **See where your attention actually went.**
 
@@ -23,8 +23,9 @@ than what you remember doing.
 
 ## Getting started
 
-Click **FOCUS** under the ICOR for Life banner in the file tree, or run
-**Open the Focus map** from the command palette.
+Click the Focus icon in the ribbon on the left, or run **Open the Focus
+map** from the command palette. You can move or hide the icon in Settings,
+Appearance, Ribbon menu.
 
 There is nothing to set up and nothing to configure. The map draws itself
 from what is already in your vault.
@@ -37,7 +38,11 @@ from what is already in your vault.
   opened once.
 - **Colour is kind.** Key Elements, Projects, Topics, Habits, Goals and
   Contacts each keep their own colour and shape; everything else stays
-  neutral so it does not compete.
+  neutral so it does not compete. The kinds come from your folders, matched
+  by their full names: `00 Daily Notes`, `01 Inbox`, `02 Inner World` and
+  `06 Planner` (a vault made before ICOR for Life 3.0 uses its old names,
+  such as `04 Inner World`). `04 Assets` holds files only and stays off the
+  map; settings change which folders are left out.
 - **The same day always draws the same map.** Position is computed from what
   happened, not from a layout algorithm looking for a pleasing arrangement.
   If something moved, something changed.
@@ -91,7 +96,7 @@ nothing: the next recompute writes the file again.
   "count_file_edits": true,
   "items": [
     {
-      "path": "04 Inner World/My Life/Topics/knowledge-management.md",
+      "path": "02 Inner World/My Life/Topics/knowledge-management.md",
       "name": "knowledge-management",
       "type": "topic",
       "score": 8.25,

@@ -105,6 +105,11 @@ function makeObsidian() {
     registerEvent(e) { this._events.push(e); }
     registerDomEvent() {}
     addCommand(c) { (this.commands || (this.commands = [])).push(c); }
+    addRibbonIcon(icon, title, callback) {
+      const el = { icon, title, callback };
+      (this.ribbons || (this.ribbons = [])).push(el);
+      return el;
+    }
     addSettingTab() {}
     registerView(type, factory) { (this.views || (this.views = {}))[type] = factory; }
   }
@@ -136,7 +141,7 @@ export function loadPlugin() {
     require: (name) => (name === 'obsidian' ? obsidian : nodeRequire(name)),
     module: { exports: {} },
     document: { querySelectorAll: () => [] },
-    window: {},
+    window: { requestAnimationFrame: () => 0, cancelAnimationFrame: () => {} },
     console, setTimeout, clearTimeout,
     JSON, Date, Math, Number, String, Array, Object, Map, Set, Promise, RegExp,
     requestAnimationFrame: () => 0,

@@ -6,6 +6,53 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.8.3] - 2026-11-23
+
+### Changed
+- The display name is now ICOR Focus (it was ICOR for Life - Focus). The plugin id stays `icor-for-life-focus`, so installed vaults, settings and hotkeys carry on unchanged.
+
+## [0.8.2] - 2026-11-23
+
+### Changed
+- **The Focus map opens from the ribbon on the left.** The icon under the
+  ICOR for Life banner in the file tree is gone (Tom, 2026-11-23: every
+  plugin's launcher moves to Obsidian's own ribbon). Click the Focus icon in
+  the ribbon, or run **Open the Focus map** from the command palette. Like any
+  ribbon icon, you can move or hide it in Settings, Appearance, Ribbon menu.
+
+## [0.8.1] - 2026-11-23
+
+Ready for the Obsidian community directory's review.
+
+### Changed
+- The map asks its own window for animation frames, so it keeps time in a
+  popout window too. The 0.7.1 release is merged into this line.
+
+## [0.8.0] - 2026-11-23
+
+### Changed
+- **The map knows ICOR for Life 3.0's folders.** 3.0 renumbers the vault's
+  folders and groups them by stage: Input (`00 Daily Notes`, `01 Inbox`),
+  Control (`02 Inner World`, `03 Outer World`, `04 Assets`, `05 Databases`)
+  and Output (`06 Planner`). Your daily notes, inbox, Planner tasks and the
+  Key Elements, Projects, Topics, Habits, Goals and Contacts in
+  `02 Inner World` keep their colours and shapes.
+- **Folders are matched by their full name, never by their number.** 3.0
+  reuses numbers: 02 was the Planner and is now the Inner World, 04 was the
+  Inner World and is now Assets, and `06 Planner` shares its 06 with an old
+  `06 AI Team`. Matching by number would have drawn your Projects as Planner
+  tasks. A vault that has not moved to 3.0 keeps its colours under its old
+  names (`00 Daily Scratchpad`, `04 Inner World`, `02 Planner`). A folder you
+  renamed yourself is drawn as ordinary notes.
+- **Assets are left off the map as `04 Assets`.** If your Excluded folders
+  setting still says `05 Assets`, it stays that way while the vault has that
+  folder, and becomes `04 Assets` (saved) once the vault has moved. A list
+  you changed yourself is never touched.
+- **The work-in-progress colour is gone**, with the folder: 3.0 has none. A
+  leftover `03 WiP` folder is drawn as ordinary notes.
+- The notice about a missing folder says "folder" and names it by its 3.0
+  name.
+
 ## [0.7.1] - 2026-11-21
 
 ### Fixed

@@ -10,6 +10,7 @@
  */
 
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 import { loadPlugin, makeApp, makeAdapter } from './harness.mjs';
@@ -65,4 +66,11 @@ test('an unchanged ranking is not written again', async () => {
   assert.equal(adapter._calls.filter(([op, p]) => op === 'write' && p === ATTENTION_PATH).length, 1);
   await plugin.writeAttention({ nodes: [], windowDays: 14 }, NOW);
   assert.equal(adapter._calls.filter(([op, p]) => op === 'write' && p === ATTENTION_PATH).length, 2, 'a changed ranking is written');
+});
+
+test('frames are asked of the window, never the bare global (popout windows, 0.8.1)', () => {
+  /* Obsidian's popout windows have their own frame clock; the directory's
+     review asks for window.requestAnimationFrame over the bare global. */
+  const source = readFileSync(new URL('../main.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /(^|[^.\w])(requestAnimationFrame|cancelAnimationFrame)\(/m);
 });

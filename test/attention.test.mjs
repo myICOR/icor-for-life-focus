@@ -92,8 +92,8 @@ test('topAttention: a missing, zero or negative count falls back to ten rather t
 /* ------------------------------------------------------------- signals -- */
 
 test('the per-signal contributions add up to the score', () => {
-  const model = modelOf([file('04 Inner World/My Life/Topics/pka.md', 0), file('00 Daily Scratchpad/2026-09-15.md', 0)], {
-    resolvedLinks: { '00 Daily Scratchpad/2026-09-15.md': { '04 Inner World/My Life/Topics/pka.md': 1 } },
+  const model = modelOf([file('02 Inner World/My Life/Topics/pka.md', 0), file('00 Daily Notes/2026-09-15.md', 0)], {
+    resolvedLinks: { '00 Daily Notes/2026-09-15.md': { '02 Inner World/My Life/Topics/pka.md': 1 } },
   });
   for (const node of model.nodes) {
     const sum = Object.values(node.signals).reduce((a, b) => a + b, 0);
@@ -102,22 +102,22 @@ test('the per-signal contributions add up to the score', () => {
 });
 
 test('a daily-note mention lands on mentions, a plain backlink on backlinks', () => {
-  const topic = '04 Inner World/My Life/Topics/pka.md';
-  const daily = modelOf([file(topic, 0), file('00 Daily Scratchpad/2026-09-15.md', 0)], {
-    resolvedLinks: { '00 Daily Scratchpad/2026-09-15.md': { [topic]: 1 } },
+  const topic = '02 Inner World/My Life/Topics/pka.md';
+  const daily = modelOf([file(topic, 0), file('00 Daily Notes/2026-09-15.md', 0)], {
+    resolvedLinks: { '00 Daily Notes/2026-09-15.md': { [topic]: 1 } },
   }).nodes.find((n) => n.path === topic);
   assert.equal(daily.signals.mentions, 3);
   assert.equal(daily.signals.backlinks, 0);
 
-  const plainLink = modelOf([file(topic, 0), file('03 WiP/draft.md', 0)], {
-    resolvedLinks: { '03 WiP/draft.md': { [topic]: 1 } },
+  const plainLink = modelOf([file(topic, 0), file('02 Inner World/Notes/draft.md', 0)], {
+    resolvedLinks: { '02 Inner World/Notes/draft.md': { [topic]: 1 } },
   }).nodes.find((n) => n.path === topic);
   assert.equal(plainLink.signals.backlinks, 1);
   assert.equal(plainLink.signals.mentions, 0);
 });
 
 test('an open lands on opens and is capped at five a day, exactly as the score always capped it', () => {
-  const p = '04 Inner World/My Life/Topics/pka.md';
+  const p = '02 Inner World/My Life/Topics/pka.md';
   const node = modelOf([file(p, 0)], {
     settings: { countFileEdits: false, opens: { [p]: { [dayKeyAgo(0, NOW)]: 9 } } },
   }).nodes.find((n) => n.path === p);
@@ -128,9 +128,9 @@ test('an open lands on opens and is capped at five a day, exactly as the score a
 /* ------------------------------------------------- the edit-signal switch -- */
 
 test('Count file edits off removes the edit contribution and leaves every other signal alone', () => {
-  const topic = '04 Inner World/My Life/Topics/pka.md';
-  const files = [file(topic, 0), file('00 Daily Scratchpad/2026-09-15.md', 0)];
-  const links = { '00 Daily Scratchpad/2026-09-15.md': { [topic]: 1 } };
+  const topic = '02 Inner World/My Life/Topics/pka.md';
+  const files = [file(topic, 0), file('00 Daily Notes/2026-09-15.md', 0)];
+  const links = { '00 Daily Notes/2026-09-15.md': { [topic]: 1 } };
 
   const on = modelOf(files, { resolvedLinks: links, settings: { countFileEdits: true } })
     .nodes.find((n) => n.path === topic);
@@ -144,9 +144,9 @@ test('Count file edits off removes the edit contribution and leaves every other 
 });
 
 test('Count file edits off still dates a backlink by the source file edit day: the switch drops the edit score, it does not stop reading mtime', () => {
-  const topic = '04 Inner World/My Life/Topics/pka.md';
-  const node = modelOf([file(topic, 30), file('03 WiP/draft.md', 1)], {
-    resolvedLinks: { '03 WiP/draft.md': { [topic]: 1 } },
+  const topic = '02 Inner World/My Life/Topics/pka.md';
+  const node = modelOf([file(topic, 30), file('02 Inner World/Notes/draft.md', 1)], {
+    resolvedLinks: { '02 Inner World/Notes/draft.md': { [topic]: 1 } },
     settings: { countFileEdits: false, windowDays: 7 },
   }).nodes.find((n) => n.path === topic);
   assert.ok(node, 'a topic reached only by a backlink must still appear');
@@ -163,8 +163,8 @@ test('the default is on, so nobody upgrading sees their map change', () => {
 /* ------------------------------------------------------------- payload -- */
 
 test('attentionPayload: the documented shape, ranked, with the whole window in it', () => {
-  const topic = '04 Inner World/My Life/Topics/pka.md';
-  const model = modelOf([file(topic, 0), file('03 WiP/draft.md', 2)]);
+  const topic = '02 Inner World/My Life/Topics/pka.md';
+  const model = modelOf([file(topic, 0), file('02 Inner World/Notes/draft.md', 2)]);
   const payload = plain(attentionPayload(model, { countFileEdits: true }, NOW));
 
   assert.equal(payload.schema, ATTENTION_SCHEMA);
@@ -185,14 +185,14 @@ test('attentionPayload: the documented shape, ranked, with the whole window in i
 });
 
 test('attentionPayload: last_seen is a local day key, not a UTC instant', () => {
-  const p = '03 WiP/draft.md';
+  const p = '02 Inner World/Notes/draft.md';
   const model = modelOf([file(p, 3)]);
   const payload = plain(attentionPayload(model, {}, NOW));
   assert.equal(payload.items[0].last_seen, '2026-09-12');
 });
 
 test('attentionPayload: count_file_edits records which of the two numbers a reader got', () => {
-  const model = modelOf([file('03 WiP/draft.md', 0)], { settings: { countFileEdits: false } });
+  const model = modelOf([file('02 Inner World/Notes/draft.md', 0)], { settings: { countFileEdits: false } });
   assert.equal(plain(attentionPayload(model, { countFileEdits: false }, NOW)).count_file_edits, false);
 });
 
@@ -246,7 +246,7 @@ test('writeAttention: the file lands in this plugin id subfolder and nowhere els
 
 test('writeAttention: what lands on disk is the documented JSON, parseable, schema first', async () => {
   const adapter = makeAdapter();
-  const topic = '04 Inner World/My Life/Topics/pka.md';
+  const topic = '02 Inner World/My Life/Topics/pka.md';
   const app = makeApp({ adapter, markdownFiles: [file(topic, 0)] });
   const plugin = makePlugin(app, {});
   await plugin.onload();
