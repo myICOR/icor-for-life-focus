@@ -36,7 +36,7 @@ const SIGNAL_WEIGHTS = { mentions: 3, edits: 2, opens: 2, backlinks: 1 };
 
 const DEFAULT_SETTINGS = {
   windowDays: 7,            // past days shown beyond today
-  excludeFolders: ['04 Assets'],   // files only, no notes (ICOR for Life 3.0; 05 Assets before)
+  excludeFolders: ['10 Files'],   // files only, no notes (ICOR for Life 3.0; 04 or 05 Assets before)
   includeReadmes: false,
   showLinks: true,
   entitiesOnly: false,      // page toggle, persisted
@@ -146,43 +146,46 @@ function labelAlphaOf(mode, zoom, threshold, entity, isHover) {
 /* A FOLDER IS ITS FULL NAME. NEVER ITS NUMBER.
  *
  * Up to 0.7.1 a top-level folder was classified by its number prefix, so a
- * renamed folder kept its colour. ICOR for Life 3.0 renumbered the folders and
- * groups them by stage: Input (00 Daily Notes, 01 Inbox), Control (02 Inner
- * World, 03 Outer World, 04 Assets, 05 Databases), Output (06 Planner); Refine
- * has no folder. A number now names a different folder depending on the
- * vault's age: 02 was the Planner and is now the Inner World, 04 was the Inner
- * World and is now Assets, and a 2.x vault's 06 AI Team shares its 06 with
- * 3.0's 06 Planner. So a folder is matched by its full name: the 3.0 name,
- * and the name a 2.x vault used, until it moves.
- *
- * The structure BELOW the Inner World is a separate contract that the
- * renumbering did not touch, so its sub-paths stay as names (INNER_CLASS). */
+ * renamed folder kept its colour. ICOR for Life 3.0 has the Workbench layout,
+ * twelve flat folders by ICOR stage: Input (00 Daily Notes, 01 Inbox),
+ * Control (02 My Life, 03 Journal, 04 Notes, 05 Contacts, 06 Sources,
+ * 10 Files, 11 Databases), Output (07 Planner, 08 Workbench) and Refine
+ * (09 AI). A number names a different folder depending on the vault's age
+ * (02 was the Planner in 2.x and the Inner World in early 3.0), so a folder is
+ * matched by its full name: the current name, and the names an older vault
+ * used, until it moves. */
 const FOLDER_CLASS = {
   '00 Daily Notes': 'journal',
   '00 Daily Scratchpad': 'journal',   // a 2.x vault
   '01 Inbox': 'inbox',
   '01 INBOX': 'inbox',                // an older spelling
-  '06 Planner': 'planner',
+  '03 Journal': 'journal',
+  '07 Planner': 'planner',
+  '06 Planner': 'planner',            // an early 3.0 vault
   '02 Planner': 'planner',            // a 2.x vault
   /* A 2.x vault's team folder, read only so such a vault keeps its colours.
-     3.0 has none, and the full name keeps 06 Planner from being taken for it. */
+     3.0 has none. */
   '06 AI Team': 'ai-team',
 };
 
-/* The Inner World, whose sub-paths carry the entity types. */
+/* Top-level folders whose sub-paths carry the entity types. */
+const SUB_CLASS = {
+  '02 My Life': [
+    ['Key Elements/', 'key-element'],
+    ['Projects/', 'project'],
+    ['Topics/', 'topic'],
+    ['Habits/', 'habit'],
+    ['Goals/', 'goal'],
+  ],
+  '05 Contacts': [
+    ['Companies/', 'company'],
+    ['', 'person'],
+  ],
+};
+
+/* The Inner World of an older vault (early 3.0, or 2.x), which held My Life,
+ * Contacts and Journal as subfolders; read until the vault moves. */
 const INNER_WORLDS = ['02 Inner World', '04 Inner World' /* a 2.x vault */];
-
-/* Every folder this plugin depends on, by its 3.0 name and the names an older
- * vault used, so a missing one can be NAMED rather than silently classified
- * as an ordinary note. The Outer World, Assets and Databases are drawn as
- * ordinary notes (or excluded), so their absence changes nothing here. */
-const EXPECTED_FOLDERS = [
-  { name: '00 Daily Notes', legacy: ['00 Daily Scratchpad'] },
-  { name: '01 Inbox', legacy: ['01 INBOX'] },
-  { name: '02 Inner World', legacy: ['04 Inner World'] },
-  { name: '06 Planner', legacy: ['02 Planner'] },
-];
-
 const INNER_CLASS = [
   ['My Life/Key Elements/', 'key-element'],
   ['My Life/Projects/', 'project'],
@@ -194,6 +197,19 @@ const INNER_CLASS = [
   ['Journal/', 'journal'],
 ];
 
+/* Every folder this plugin depends on, by its current name and the names an
+ * older vault used, so a missing one can be NAMED rather than silently
+ * classified as an ordinary note. Notes, Sources, Files and Databases are
+ * drawn as ordinary notes (or excluded), so their absence changes nothing. */
+const EXPECTED_FOLDERS = [
+  { name: '00 Daily Notes', legacy: ['00 Daily Scratchpad'] },
+  { name: '01 Inbox', legacy: ['01 INBOX'] },
+  { name: '02 My Life', legacy: INNER_WORLDS },
+  { name: '03 Journal', legacy: INNER_WORLDS },
+  { name: '05 Contacts', legacy: INNER_WORLDS },
+  { name: '07 Planner', legacy: ['06 Planner', '02 Planner'] },
+];
+
 /* The top-level folder a vault path sits in, or null for a note at the root. */
 function topFolderOf(path) {
   const i = String(path).indexOf('/');
@@ -202,6 +218,11 @@ function topFolderOf(path) {
 
 function classifyPath(path) {
   const top = topFolderOf(path);
+  if (top && SUB_CLASS[top]) {
+    const rest = path.slice(top.length + 1);
+    for (const [prefix, cls] of SUB_CLASS[top]) if (rest.startsWith(prefix)) return cls;
+    return 'note';
+  }
   if (top && INNER_WORLDS.includes(top)) {
     const rest = path.slice(top.length + 1);
     for (const [prefix, cls] of INNER_CLASS) if (rest.startsWith(prefix)) return cls;
@@ -226,18 +247,17 @@ function missingFoldersMessage(missing) {
     + `Those notes will be drawn as ordinary notes until the folder${one ? ' is' : 's are'} there.`;
 }
 
-/* A saved "Excluded folders" that still equals the old default keeps working
- * (ICOR for Life 3.0 moved 05 Assets to 04 Assets): as saved while the vault
- * still has 05 Assets, the new name once the vault has 04 Assets instead.
+/* A saved "Excluded folders" that still equals an old default keeps working
+ * (05 Assets in 2.x, 04 Assets in early 3.0, 10 Files now): as saved while the
+ * vault still has that folder, the new name once the vault has 10 Files.
  * Anything the member changed is left exactly as it is. Returns the list to
  * use; the caller saves it when it differs. */
-const OLD_DEFAULT_EXCLUDE = ['05 Assets'];
+const OLD_DEFAULT_EXCLUDES = ['05 Assets', '04 Assets'];
 function adoptExcludeFolders(saved, hasFolder) {
-  const same = Array.isArray(saved) && saved.length === OLD_DEFAULT_EXCLUDE.length
-    && saved.every((f, i) => f === OLD_DEFAULT_EXCLUDE[i]);
+  const same = Array.isArray(saved) && saved.length === 1 && OLD_DEFAULT_EXCLUDES.includes(saved[0]);
   if (!same) return saved;
-  if (hasFolder('05 Assets')) return saved;
-  if (hasFolder('04 Assets')) return ['04 Assets'];
+  if (hasFolder(saved[0])) return saved;
+  if (hasFolder('10 Files')) return ['10 Files'];
   return saved;
 }
 
@@ -1406,7 +1426,7 @@ module.exports = IcorFocusPlugin;
 module.exports.default = IcorFocusPlugin;
 module.exports.__test = {
   classifyPath, topFolderOf, missingFolders, missingFoldersMessage, adoptExcludeFolders,
-  FOLDER_CLASS, INNER_WORLDS, EXPECTED_FOLDERS,
+  FOLDER_CLASS, SUB_CLASS, INNER_WORLDS, EXPECTED_FOLDERS,
   dayKeyOf, dayIndexOf, dayIndexOfMtime, makeAccumulator,
   isExcluded, buildModel, bandLayout, angleOf, nodeRadius, TYPES,
   traceShape, labelAlphaOf, mergeOpens, pruneOpensLog, OPENS_STORAGE_KEY,

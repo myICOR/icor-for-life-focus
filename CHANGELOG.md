@@ -6,6 +6,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 Releases before 0.6.0 carry their notes on the GitHub release itself
 (the commit subjects since the previous tag).
 
+## [0.9.0] - 2026-11-28
+
+### Changed
+- The Workbench layout: Focus colours the twelve folders of ICOR for Life 3.0 by name. My Life (02 My Life), the journal (03 Journal) and contacts (05 Contacts, with Companies/) are now folders of their own; 07 Planner is the Planner. An early 3.0 vault (02 Inner World, 06 Planner) and a 2.x vault keep their colours until they move.
+- 10 Files is excluded from the map by default. A saved list that still equals an old default (05 Assets or 04 Assets) follows the folder once the vault has moved it.
+
 ## [0.8.3] - 2026-11-23
 
 ### Changed
